@@ -78,7 +78,7 @@ class DataSourceBlock:
             w = None
             lbl = opt.get("description", opt.get("label", opt["id"]))
             style = {"description_width": "initial"}
-            layout = widgets.Layout(width="100%", max_width="300px")
+            layout = widgets.Layout(width="98%")
             
             if opt["type"] == "text":
                 w = widgets.Text(description=lbl, value=str(opt.get("value", "")), placeholder=opt.get("placeholder", ""), layout=layout, style=style)
@@ -88,20 +88,33 @@ class DataSourceBlock:
                 else:
                     w = widgets.Text(description=lbl, value=str(opt.get("value", "")), layout=layout, style=style)
             elif opt["type"] == "checkbox":
-                w = widgets.Checkbox(value=opt.get("value", False), description=lbl, layout=widgets.Layout(width="max-content"), style=style, indent=False)
+                w = widgets.Checkbox(value=opt.get("value", False), description=lbl, layout=layout, style=style, indent=False)
             elif opt["type"] == "floatslider":
-                layout_sl = widgets.Layout(width="100%", max_width="350px")
-                w = widgets.FloatSlider(value=opt.get("value", 1.0), min=opt.get("min", 0.0), max=opt.get("max", 1.0), description=lbl, layout=layout_sl, style=style)
+                w = widgets.FloatSlider(value=opt.get("value", 1.0), min=opt.get("min", 0.0), max=opt.get("max", 1.0), description=lbl, layout=layout, style=style)
                 
             if w:
-                help_text = widgets.HTML(f"<div style='font-size:0.8em; color:gray; padding-left:5px; margin-top:2px;'>{opt.get('help', '')}</div>")
+                help_text = widgets.HTML(f"<div style='font-size:0.8em; color:gray; padding-left:5px; margin-top:2px; white-space: normal; word-wrap: break-word; line-height: 1.2;'>{opt.get('help', '')}</div>")
                 self.opt_widgets[opt["id"]] = w
-                # Use a VBox to place help text underneath, and give it flex-basis to fill columns
-                box = widgets.VBox([w, help_text], layout=widgets.Layout(min_width="220px", flex="1 1 auto", margin="5px 10px 10px 0"))
+                box = widgets.VBox([w, help_text], layout=widgets.Layout(width="100%"))
                 boxes.append(box)
                 
         if boxes:
-            acc = widgets.Accordion(children=[widgets.HBox(boxes, layout=widgets.Layout(flex_wrap="wrap", padding="10px 0 0 5px", width="100%"))])
+            box_layout = widgets.Layout(
+                display="flex",
+                flex_wrap="wrap",
+                width="100%",
+                align_items="flex-start",
+                justify_content="space-between",
+                padding="10px"
+            )
+            # Make the children flexibly fill the space
+            for bx in boxes:
+                bx.layout.flex = "1 1 280px"
+                bx.layout.min_width = "280px"
+                bx.layout.margin = "5px 10px"
+                
+            grid = widgets.HBox(boxes, layout=box_layout)
+            acc = widgets.Accordion(children=[grid])
             acc.set_title(0, "Options avancées")
             self.dynamic_opts.children = [acc]
         else:
@@ -115,13 +128,29 @@ class DataSourceBlock:
         
         mode = self.src_mode.value
         if mode == "Upload" and self.upload.value:
-            src_type = "upload"
+            src_type = "local"
             try:
                 uploaded_file = self.upload.value[0] if isinstance(self.upload.value, tuple) else list(self.upload.value.values())[0]
-                src_content = bytes(uploaded_file['content'])
+                content_bytes = bytes(uploaded_file['content'])
+                filename = uploaded_file['name']
             except Exception:
                 keys = list(self.upload.value.keys())
-                src_content = bytes(self.upload.value[keys[0]]['content'])
+                uploaded_file = self.upload.value[keys[0]]
+                content_bytes = bytes(uploaded_file['content'])
+                filename = uploaded_file.get('metadata', {}).get('name', 'uploaded_file')
+                
+            import os
+            os.makedirs("data/raw", exist_ok=True)
+            safe_name = filename.replace(" ", "_").replace("/", "_")
+            file_path = f"data/raw/{safe_name}"
+            with open(file_path, "wb") as f:
+                f.write(content_bytes)
+                
+            src_content = file_path
+            
+            # Afficher un message temporaire (sera écrasé par preview ou clear_output si print est utilisé)
+            print(f"📁 Fichier {safe_name} uploadé et sauvegardé sur disque avec succès.")
+            
         elif mode == "Presse-papier" and self.paste_in.value:
             src_type = "upload"
             src_content = self.paste_in.value.encode('utf-8')
@@ -266,7 +295,7 @@ class DataLoaderUI:
             w = None
             lbl = opt.get("label", opt["id"])
             style = {"description_width": "initial"}
-            layout = widgets.Layout(width="100%", max_width="300px")
+            layout = widgets.Layout(width="98%")
             
             if opt["type"] == "text":
                 w = widgets.Text(description=lbl, value=str(opt.get("value", "")), placeholder=opt.get("placeholder", ""), layout=layout, style=style)
@@ -276,19 +305,33 @@ class DataLoaderUI:
                 else:
                     w = widgets.Text(description=lbl, value=str(opt.get("value", "")), layout=layout, style=style)
             elif opt["type"] == "checkbox":
-                w = widgets.Checkbox(value=opt.get("value", False), description=lbl, layout=widgets.Layout(width="max-content"), style=style, indent=False)
+                w = widgets.Checkbox(value=opt.get("value", False), description=lbl, layout=layout, style=style, indent=False)
             elif opt["type"] == "floatslider":
-                layout_sl = widgets.Layout(width="100%", max_width="350px")
-                w = widgets.FloatSlider(value=opt.get("value", 1.0), min=opt.get("min", 0.0), max=opt.get("max", 1.0), description=lbl, layout=layout_sl, style=style)
+                w = widgets.FloatSlider(value=opt.get("value", 1.0), min=opt.get("min", 0.0), max=opt.get("max", 1.0), description=lbl, layout=layout, style=style)
                 
             if w:
-                help_text = widgets.HTML(f"<div style='font-size:0.8em; color:gray; padding-left:5px; margin-top:2px;'>{opt.get('help', '')}</div>")
+                help_text = widgets.HTML(f"<div style='font-size:0.8em; color:gray; padding-left:5px; margin-top:2px; white-space: normal; word-wrap: break-word; line-height: 1.2;'>{opt.get('help', '')}</div>")
                 self.mode_opt_widgets[opt["id"]] = w
-                box = widgets.VBox([w, help_text], layout=widgets.Layout(min_width="220px", flex="1 1 auto", margin="5px 10px 10px 0"))
+                box = widgets.VBox([w, help_text], layout=widgets.Layout(width="100%"))
                 boxes.append(box)
                 
         if boxes:
-            acc = widgets.Accordion(children=[widgets.HBox(boxes, layout=widgets.Layout(flex_wrap="wrap", margin="5px 0", width="100%"))])
+            box_layout = widgets.Layout(
+                display="flex",
+                flex_wrap="wrap",
+                width="100%",
+                align_items="flex-start",
+                justify_content="space-between",
+                padding="10px"
+            )
+            # Make the children flexibly fill the space
+            for bx in boxes:
+                bx.layout.flex = "1 1 280px"
+                bx.layout.min_width = "280px"
+                bx.layout.margin = "5px 10px"
+                
+            grid = widgets.HBox(boxes, layout=box_layout)
+            acc = widgets.Accordion(children=[grid])
             acc.set_title(0, "Mode Config")
             self.mode_opts_container.children = [acc]
             self.mode_opts_container.layout.display = "block"
