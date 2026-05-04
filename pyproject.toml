@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flipova-kitx"
+version = "1.0.0"
+description = "A dynamic ML Pipeline toolkit"
+authors = [
+  { name = "dadflip" }
+]
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    # Les dépendances seront gérées dynamiquement via ml_pipeline.steps.installer (s00_install)
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ml_pipeline*"]
+
+[tool.setuptools.package-data]
+ml_pipeline = ["*.toml", "**/*.toml", "**/*.json"]

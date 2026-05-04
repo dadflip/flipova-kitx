@@ -1,20 +1,49 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# flipova-kitx
 
-# Run and deploy your AI Studio app
+![GitHub Banner](https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6)
 
-This contains everything you need to run your app locally.
+A dynamic, interactive Machine Learning toolkit designed for Jupyter Notebooks and Google Colab. The pipeline provides a modular, step-by-step UI built with `ipywidgets` for managing your entire ML workflow directly within your notebooks.
 
-View your app in AI Studio: https://ai.studio/apps/63a7f2e9-12a9-4553-a934-8bcdb0a4338a
+## Quickstart
 
-## Run Locally
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/dadflip/flipova-kitx/blob/main/notebook.ipynb)
 
-**Prerequisites:**  Node.js
+Explore the toolkit immediately by opening the provided notebook in Google Colab.
 
+## Features
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+- **Interactive UI Components**: Beautiful, interactive cells built with `ipywidgets` for configurations, data loading, EDA, and business objectives.
+- **Dynamic Dependency Management**: Install only the libraries you specify right from the UI (Data Science, Vision, Neo4j, Graphs, NLP, etc.).
+- **Flexible Data Loading**: Supports local tabular files, timeseries, images, videos, ontology graphs, Cypher Neo4j querying, and more.
+- **Config-Driven**: Uses TOML files to dynamically render configuration settings, parameters, and form choices without altering code.
+
+## Installation
+
+Install the package directly from GitHub:
+
+```bash
+pip install git+https://github.com/dadflip/flipova-kitx.git
+```
+
+## Usage
+
+In any Jupyter Notebook (or Google Colab environment), run the following to initialize the ML Pipeline UI:
+
+```python
+import traceback
+from IPython.display import display
+from ml_pipeline.state import PipelineState
+
+# Initialize pipeline state and config
+state = PipelineState("ml_pipeline/default.toml")
+
+# Start Step 0: Installations
+try:
+    from ml_pipeline.steps.installer.ui.base import InstallerUI
+    s00 = InstallerUI(state)
+    display(s00.ui)
+except Exception:
+    traceback.print_exc()
+```
+
+Look at the `notebook.ipynb` file in this repository to see a full structure featuring EDA, context definitions, and data loading steps.
