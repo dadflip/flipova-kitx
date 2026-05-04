@@ -202,7 +202,7 @@ class TabularCleaner:
                 params[col] = {"missing": m_act, "null_reps": null_str}
                 ops += 1
 
-            df_new = execute_cleaning_logic(self.original_datasets[self.current_ds], params, row_widgets_info)
+            df_new, fitted_states = execute_cleaning_logic(self.original_datasets[self.current_ds], params, row_widgets_info)
             self.current_datasets[self.current_ds] = df_new
             
             # Store back safely to data_cleaned
@@ -216,7 +216,7 @@ class TabularCleaner:
                 self.state.data_cleaned[ds_name] = df_new
                 
             self.state.log_step("Data Cleaning", "Cleaning Applied",
-                                 {"dataset": self.current_ds, "operations": params})
+                                 {"dataset": self.current_ds, "operations": params, "fitted_states": fitted_states})
             display(styles.info_msg(
                 f"<b>{ops}</b> opération(s) appliquée(s) sur '{self.current_ds}'.<br>"
                 f"Original : {self.original_datasets[self.current_ds].shape} → "

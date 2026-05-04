@@ -155,7 +155,7 @@ id = "explainability"
 label = "Explicabilité (SHAP, LIME)"
 packages = ["shap", "lime"]
 check = ["shap", "lime"]
-default = false
+default = true
 required = false
 
 [[environment.packages.groups]]
@@ -163,7 +163,7 @@ id = "hpo"
 label = "Hyperparameter Tuning (Optuna, Hyperopt)"
 packages = ["optuna", "hyperopt"]
 check = ["optuna", "hyperopt"]
-default = false
+default = true
 required = false
 
 [[environment.packages.groups]]
@@ -195,6 +195,14 @@ id = "utils"
 label = "Utilitaires (tqdm, joblib, python-dotenv)"
 packages = ["tqdm", "joblib", "python-dotenv"]
 check = ["tqdm", "joblib", "dotenv"]
+default = true
+required = false
+
+[[environment.packages.groups]]
+id = "deploy"
+label = "FastAPI & Deploy"
+packages = ["fastapi", "uvicorn", "pydantic", "python-multipart"]
+check = ["fastapi", "uvicorn"]
 default = true
 required = false
 

@@ -144,7 +144,7 @@ class SplitBalancingUI:
         plt.suptitle("Preview: Before / After Balancing", fontsize=11, fontweight="bold", y=0.98)
         plt.tight_layout()
         with self.grid_output:
-            clear_output(wait=True); plt.show(); plt.close(fig)
+            clear_output(wait=True); display(fig); plt.close(fig)
 
     def _do_balance(self, _=None) -> None:
         with self.balance_output:

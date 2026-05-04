@@ -9,8 +9,9 @@ def auto_suggest_missing(col: str, df: pd.DataFrame, meta_info: dict) -> str:
     if pct < 5:  return "drop_rows"
     return "median" if is_num else "mode"
 
-def execute_cleaning_logic(df_original: pd.DataFrame, params: dict, row_widgets_info: dict) -> pd.DataFrame:
+def execute_cleaning_logic(df_original: pd.DataFrame, params: dict, row_widgets_info: dict) -> tuple[pd.DataFrame, dict]:
     df_new = df_original.copy()
+    fitted_states = {}
     for col, param in params.items():
         m_act = param["missing"]
         null_str = param["null_reps"]
@@ -32,21 +33,33 @@ def execute_cleaning_logic(df_original: pd.DataFrame, params: dict, row_widgets_
             
         if m_act == "drop_cols":   
             df_new.drop(columns=[col], inplace=True)
+            fitted_states[col] = {"action": "drop_cols"}
         elif m_act == "drop_rows": 
             df_new.dropna(subset=[col], inplace=True)
+            fitted_states[col] = {"action": "drop_rows"}
         elif m_act == "mean" and is_num: 
-            df_new[col] = df_new[col].fillna(df_new[col].mean())
+            val = float(df_new[col].mean())
+            df_new[col] = df_new[col].fillna(val)
+            fitted_states[col] = {"action": "fill", "value": val}
         elif m_act == "median" and is_num: 
-            df_new[col] = df_new[col].fillna(df_new[col].median())
+            val = float(df_new[col].median())
+            df_new[col] = df_new[col].fillna(val)
+            fitted_states[col] = {"action": "fill", "value": val}
         elif m_act == "mode":
             modes = df_new[col].mode()
             if not modes.empty: 
-                df_new[col] = df_new[col].fillna(modes.iloc[0])
+                val = modes.iloc[0]
+                df_new[col] = df_new[col].fillna(val)
+                fitted_states[col] = {"action": "fill", "value": val}
         elif m_act == "zero":  
-            df_new[col] = df_new[col].fillna(0 if is_num else "0")
+            val = 0 if is_num else "0"
+            df_new[col] = df_new[col].fillna(val)
+            fitted_states[col] = {"action": "fill", "value": val}
         elif m_act == "ffill": 
             df_new[col] = df_new[col].ffill()
+            fitted_states[col] = {"action": "ffill"}
         elif m_act == "bfill": 
             df_new[col] = df_new[col].bfill()
+            fitted_states[col] = {"action": "bfill"}
             
-    return df_new
+    return df_new, fitted_states

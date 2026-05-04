@@ -43,8 +43,9 @@ def apply_outliers(df: pd.DataFrame, outlier_params: dict) -> pd.DataFrame:
                 df_new = df_new[(((df_new[col] - df_new[col].mean()) / std).abs() <= 3)]
     return df_new
 
-def apply_encoding(df: pd.DataFrame, enc_params: dict, config: dict) -> pd.DataFrame:
+def apply_encoding(df: pd.DataFrame, enc_params: dict, config: dict) -> tuple[pd.DataFrame, dict]:
     df_new = df.copy()
+    fitted_encoders = {}
     for col, param in enc_params.items():
         enc_value = param["enc_value"]
         kind = param["kind"]
@@ -56,11 +57,13 @@ def apply_encoding(df: pd.DataFrame, enc_params: dict, config: dict) -> pd.DataF
             
         if enc_value == "drop":
             df_new.drop(columns=[col], inplace=True)
+            fitted_encoders[col] = {"action": "drop"}
         elif opt_info and "code" in opt_info and opt_info["code"]:
             loc_env = {"pd": pd, "np": np, "df": df_new, "col": col, "params": opt_info.get("params", {})}
             try:
                 exec(opt_info["code"], globals(), loc_env)
                 df_new = loc_env["df"]
+                fitted_encoders[col] = {"action": "code", "code": opt_info["code"], "params": opt_info.get("params", {})}
             except Exception as e:
                 print(f"[Error] Encoding {enc_value} on {col}: {e}")
         elif opt_info and "module" in opt_info and "class_name" in opt_info:
@@ -107,10 +110,11 @@ def apply_encoding(df: pd.DataFrame, enc_params: dict, config: dict) -> pd.DataF
                             df_new[col] = transformed[:, 0]
                         else:
                             df_new[col] = transformed
+                fitted_encoders[col] = {"action": "sklearn", "encoder": encoder}
             except Exception as e:
                 print(f"[Error] Encoding {enc_value} on {col} with module {opt_info['module']}: {e}")
                 
-    return df_new
+    return df_new, fitted_encoders
 
 def build_sklearn_pipeline_code(enc_params: dict, config: dict) -> str:
     imports = set()

@@ -78,7 +78,8 @@ class UltimateEncoder:
                 "kind": wd["kind"]
             }
             
-        return apply_encoding(df, enc_params, self.config)
+        df_enc, _ = apply_encoding(df, enc_params, self.config)
+        return df_enc
 
     def _build_ui(self) -> None:
         tabs_children = []
@@ -289,7 +290,8 @@ class UltimateEncoder:
                     axs[1].set_title(f"Boxplot: {col_name}")
                     
                     plt.tight_layout()
-                    plt.show()
+                    display(fig)
+                    plt.close(fig)
             out_dd.observe(_update_ratio, names="value")
             self._tab_outlier_widgets[col] = {"outlier_dd": out_dd, "flag_cb": flag_cb}
             rows.append(widgets.HBox([lbl_col, out_dd, lbl_ratio, flag_cb],
@@ -318,7 +320,7 @@ class UltimateEncoder:
             if timing == "Before Encoding":
                 df = apply_outliers(df, outlier_params)
                 
-            df = apply_encoding(df, enc_params, self.config)
+            df, _ = apply_encoding(df, enc_params, self.config)
             
             if timing == "After Encoding":
                 df = apply_outliers(df, outlier_params)
@@ -334,7 +336,11 @@ class UltimateEncoder:
                 self.state.data_encoded[ds_name] = df
                 
             self.state.log_step("Data Encoding", "Tabular Encoded",
-                                 {"dataset": self.current_ds, "outliers_timing": timing})
+                                 {"dataset": self.current_ds, 
+                                  "outliers_timing": timing,
+                                  "params": enc_params,
+                                  "outliers": outlier_params,
+                                  "fitted_encoders": _})
             display(styles.info_msg(
                 f"Encodage appliqué sur '{self.current_ds}'.<br>"
                 f"Original : {self.datasets[self.current_ds].shape} → Final : {df.shape}"))

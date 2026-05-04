@@ -18,10 +18,10 @@ from ..logic.operations import (
 )
 
 def _metric_card(name, value, color="#6366f1") -> str:
-    return (f"<div style='background:#ffffff;border:1px solid #e2e8f0;border-top:3px solid {color};"
-            f"border-radius:6px;padding:12px 16px;text-align:center;min-width:120px;'>"
-            f"<div style='font-size:0.7em;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;margin-bottom:6px;'>{name}</div>"
-            f"<div style='font-size:1.5em;font-weight:700;color:#1e293b;'>{value}</div></div>")
+    return (f"<div style='background:#ffffff;border:1px solid #f1f5f9;border-left:4px solid {color};"
+            f"border-radius:12px;padding:16px 20px;box-shadow:0 1px 3px rgba(15,23,42,0.02);min-width:140px;'>"
+            f"<div style='font-size:0.75em;text-transform:uppercase;letter-spacing:0.05em;color:#64748b;font-weight:600;margin-bottom:8px;'>{name}</div>"
+            f"<div style='font-size:1.6em;font-weight:700;color:#0f172a;'>{value}</div></div>")
 
 def _section(title, color="#6366f1") -> widgets.HTML:
     return widgets.HTML(f"<div style='display:flex;align-items:center;gap:10px;margin:18px 0 10px 0;'>"
@@ -166,7 +166,9 @@ class EvaluationUI:
             n = len(sel)
             if n == 1:
                 name, model = list(sel.items())[0]
-                try: plt.show(plot_confusion_matrix(model, X_eval, y_eval, name))
+                try:
+                    fig = plot_confusion_matrix(model, X_eval, y_eval, name)
+                    if fig: display(fig); plt.close(fig)
                 except Exception as e: display(_warn(f"Unavailable: {e}"))
             else:
                 cols = min(3, n); rows = (n+cols-1)//cols
@@ -179,9 +181,11 @@ class EvaluationUI:
                         except Exception: ax.set_title(f"{name}: ERR", fontsize=9, color="#ef4444")
                     else: ax.set_title(f"{name}: data unavailable", fontsize=9, color="#ef4444")
                 for ax in axes_flat[len(sel):]: ax.set_visible(False)
-                plt.tight_layout(); plt.show()
+                plt.tight_layout(); display(fig); plt.close(fig)
             display(_section("ROC Curves", "#10b981"))
-            try: plt.show(plot_roc_curves(sel, X_eval, y_eval))
+            try:
+                fig = plot_roc_curves(sel, X_eval, y_eval)
+                if fig: display(fig); plt.close(fig)
             except Exception as e: display(_warn(f"ROC unavailable: {e}"))
 
     def _on_reg_plots(self, b) -> None:
@@ -192,7 +196,9 @@ class EvaluationUI:
                 if not is_valid(X_eval) or not is_valid(y_eval):
                     display(_warn(f"Evaluation data unavailable for {name}.")); continue
                 display(_section(f"Residuals — {name}", "#f59e0b"))
-                try: plt.show(plot_residuals(model, X_eval, y_eval, name))
+                try:
+                    fig = plot_residuals(model, X_eval, y_eval, name)
+                    if fig: display(fig); plt.close(fig)
                 except Exception as e: display(_warn(f"Residuals unavailable: {e}"))
 
     def _on_fi_plots(self, b) -> None:
@@ -204,7 +210,7 @@ class EvaluationUI:
             for name, model in self._selected_models().items():
                 display(_section(f"Feature Importance — {name}", "#3b82f6"))
                 fig = plot_feature_importance(model, feature_names, name)
-                if fig: plt.show()
+                if fig: display(fig); plt.close(fig)
                 else: display(_warn(f"{name} does not expose feature_importances_ or coef_."))
 
     def _on_lc_plots(self, b) -> None:
@@ -221,7 +227,7 @@ class EvaluationUI:
                 if hasattr(fast_model, "n_estimators"): fast_model.set_params(n_estimators=min(n_est_fast, fast_model.n_estimators))
                 if hasattr(fast_model, "n_jobs"): fast_model.set_params(n_jobs=1)
                 fig = plot_learning_curve(fast_model, X_train, y_train, name, self.task, max_samples=max_samples, cv=cv_folds, n_points=n_points)
-                if fig: plt.show()
+                if fig: display(fig); plt.close(fig)
                 else: display(_warn(f"Learning curve unavailable for {name}."))
 
     def _on_explainability(self, b) -> None:
@@ -243,7 +249,7 @@ class EvaluationUI:
                         fig, axes = plt.subplots(1, 2, figsize=(14, 5)); fig.patch.set_facecolor(_BG)
                         plt.sca(axes[0]); shap.plots.beeswarm(shap_values, max_display=15, show=False)
                         plt.sca(axes[1]); shap.plots.bar(shap_values, max_display=15, show=False)
-                        plt.tight_layout(); clear_output(wait=True); display(_section(f"SHAP — {model_name}", "#8b5cf6")); plt.show()
+                        plt.tight_layout(); clear_output(wait=True); display(_section(f"SHAP — {model_name}", "#8b5cf6")); display(fig); plt.close(fig)
                     except ImportError: display(_warn("SHAP not available — pip install shap"))
                     except Exception as e: display(_warn(f"SHAP error: {e}"))
                 elif "LIME" in explainer_name:
@@ -255,7 +261,7 @@ class EvaluationUI:
                         predict_fn = model.predict_proba if hasattr(model, "predict_proba") and self.task == "classification" else model.predict
                         exp = exp_obj.explain_instance(X_eval.iloc[0].values if hasattr(X_eval, "iloc") else X_eval[0], predict_fn, num_features=15)
                         fig = exp.as_pyplot_figure(); fig.patch.set_facecolor(_BG); plt.tight_layout()
-                        clear_output(wait=True); display(_section(f"LIME — {model_name}", "#8b5cf6")); plt.show()
+                        clear_output(wait=True); display(_section(f"LIME — {model_name}", "#8b5cf6")); display(fig); plt.close(fig)
                     except ImportError: display(_warn("LIME not available — pip install lime"))
                     except Exception as e: display(_warn(f"LIME error: {e}"))
 
@@ -268,7 +274,7 @@ class EvaluationUI:
             for metric in sorted(all_metric_names):
                 display(_section(f"Comparison — {metric}", "#ec4899"))
                 fig = plot_metric_comparison(self._all_metrics, metric)
-                if fig: plt.show()
+                if fig: display(fig); plt.close(fig)
             display(_section("Summary table", "#1e293b"))
             rows = [{"Model": name, **{k: (f"{v:.4f}" if isinstance(v, float) else v) for k, v in metrics.items()}} for name, metrics in self._all_metrics.items()]
             if rows:

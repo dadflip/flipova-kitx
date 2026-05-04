@@ -73,8 +73,12 @@ class OptimizationUI:
         top_bar = widgets.HBox([header], layout=widgets.Layout(align_items="center", margin="0 0 12px 0", padding="0 0 10px 0", border_bottom="2px solid #ede9fe"))
         self.dd_model = widgets.Dropdown(options=list(self.models.keys()), description="Modèle :", style={"description_width": "initial"}, layout=widgets.Layout(width="380px"))
         self.dd_model.observe(self._on_model_change, names="value")
-        self.dd_method = widgets.Dropdown(options=[("RandomizedSearchCV (recommandé)", "randomized"), ("GridSearchCV (exhaustif)", "grid")], value="randomized", description="Méthode :", style={"description_width": "initial"}, layout=widgets.Layout(width="380px"))
-        self.int_n_iter = widgets.IntSlider(value=20, min=5, max=200, step=5, description="n_iter (Random) :", style={"description_width": "initial"}, layout=widgets.Layout(width="380px"))
+        self.dd_method = widgets.Dropdown(options=[
+            ("RandomizedSearchCV (Rapide & Équilibré)", "randomized"), 
+            ("GridSearchCV (Exhaustif)", "grid"),
+            ("Optuna (Bayesian — Recommandé, très fin)", "optuna")
+        ], value="optuna", description="Méthode :", style={"description_width": "initial"}, layout=widgets.Layout(width="420px"))
+        self.int_n_iter = widgets.IntSlider(value=30, min=5, max=500, step=5, description="Itérations/Essais :", style={"description_width": "initial"}, layout=widgets.Layout(width="380px"))
         self.int_cv = widgets.IntSlider(value=5, min=2, max=10, step=1, description="CV folds :", style={"description_width": "initial"}, layout=widgets.Layout(width="300px"))
         self.dd_scoring = widgets.Dropdown(options=["roc_auc","f1","f1_macro","f1_weighted","accuracy","precision","recall","r2","neg_mean_absolute_error","neg_mean_squared_error","neg_root_mean_squared_error"], value=scoring_default, description="Scoring :", style={"description_width": "initial"}, layout=widgets.Layout(width="300px"))
         self.chk_refit = widgets.Checkbox(value=True, description="Refit sur toutes les données (X_train complet)", layout=widgets.Layout(width="380px"))
@@ -89,10 +93,10 @@ class OptimizationUI:
         self.btn_set_best = widgets.Button(description="Définir best_model", button_style="warning", layout=widgets.Layout(width="200px"))
         self.btn_set_best.on_click(self._set_best_manual)
         self.output = widgets.Output()
-        self.dd_method.observe(lambda c: setattr(self.int_n_iter.layout, "display", "flex" if c["new"] == "randomized" else "none"), names="value")
+        self.dd_method.observe(lambda c: setattr(self.int_n_iter.layout, "display", "flex" if c["new"] in ["randomized", "optuna"] else "none"), names="value")
         self.ui = widgets.VBox([
             top_bar,
-            styles.help_box("<b>Optimisation des hyperparamètres</b> par RandomizedSearchCV ou GridSearchCV.<br>L'espace de recherche est pré-rempli selon le modèle sélectionné.", "#6366f1"),
+            styles.help_box("<b>Optimisation des hyperparamètres</b><br><li><b>Optuna</b> : (Recommandé) Smart, s'adapte à l'espace, évite les tests inutiles.</li><li><b>RandomizedSearchCV</b> : Aléatoire, limite le temps pour l'entraînement.</li><li><b>GridSearchCV</b> : Exhaustif (peut être infiniment long).</li>", "#6366f1"),
             widgets.HTML("<b style='color:#374151;font-size:0.9em;'>Modèle à optimiser</b>"), self.dd_model,
             widgets.HTML("<hr style='border:1px solid #f1f5f9;margin:8px 0;'>"),
             widgets.HTML("<b style='color:#374151;font-size:0.9em;'>Méthode de recherche</b>"),
@@ -142,13 +146,67 @@ class OptimizationUI:
                            else KFold(n_splits=cv_fold, shuffle=True, random_state=42))
             base_model = clone(model)
             try:
-                if method == "randomized":
+                if method == "optuna":
+                    try:
+                        import optuna
+                    except ImportError:
+                        display(_warn("Le package 'optuna' n'est pas installé. Veuillez l'installer via l'étape S00 ou utiliser RandomizedSearchCV."))
+                        return
+                    from sklearn.model_selection import cross_val_score
+                    optuna.logging.set_verbosity(optuna.logging.WARNING)
+
+                    def objective(trial):
+                        params = {}
+                        for k, v in param_dist.items():
+                            cls = type(v).__name__
+                            if hasattr(v, "a") and hasattr(v, "b") and "randint" in cls:
+                                params[k] = trial.suggest_int(k, v.a, v.b - 1)
+                            elif hasattr(v, "args") and "uniform" in cls:
+                                loc = v.args[0] if v.args else v.kwds.get("loc", 0)
+                                scale = v.args[1] if len(v.args) > 1 else v.kwds.get("scale", 1)
+                                params[k] = trial.suggest_float(k, loc, loc + scale)
+                            elif isinstance(v, list):
+                                params[k] = trial.suggest_categorical(k, v)
+                            else:
+                                params[k] = v
+                        cloned = clone(base_model).set_params(**params)
+                        # On Optuna On cherche à maximiser le score retourné par cross_val_score.
+                        # cross_val_score gère neg_mean_squared_error pour que "plus c'est élevé, mieux c'est".
+                        score = cross_val_score(cloned, X_tr, y_tr, cv=cv_splitter, scoring=scoring, n_jobs=-1)
+                        if np.isnan(score.mean()):
+                            raise optuna.TrialPruned()
+                        return score.mean()
+
+                    study = optuna.create_study(direction="maximize")
+                    study.optimize(objective, n_trials=n_iter, n_jobs=1, show_progress_bar=False)
+                    best_score = study.best_value
+                    best_params = study.best_params
+                    best_model = clone(base_model).set_params(**best_params)
+                    # Optuna doesn't give us searcher, so we make a dummy one for the plot
+                    class DummySearcher:
+                        pass
+                    searcher = DummySearcher()
+                    
+                    df_trials = study.trials_dataframe()
+                    if "value" in df_trials.columns:
+                        searcher.cv_results_ = {
+                            "mean_test_score": df_trials["value"].values,
+                            "std_test_score": np.zeros(len(df_trials)),
+                            "rank_test_score": df_trials["value"].rank(ascending=False, method="min").values.astype(int)
+                        }
+                    else:
+                        searcher.cv_results_ = {}
+                        
+                elif method == "randomized":
                     searcher = RandomizedSearchCV(base_model, param_dist, n_iter=n_iter, scoring=scoring, cv=cv_splitter, n_jobs=-1, verbose=0, random_state=42, refit=True)
+                    searcher.fit(X_tr, y_tr)
+                    best_score = searcher.best_score_; best_params = searcher.best_params_; best_model = searcher.best_estimator_
                 else:
                     searcher = GridSearchCV(base_model, param_dist, scoring=scoring, cv=cv_splitter, n_jobs=-1, verbose=0, refit=True)
-                searcher.fit(X_tr, y_tr)
+                    searcher.fit(X_tr, y_tr)
+                    best_score = searcher.best_score_; best_params = searcher.best_params_; best_model = searcher.best_estimator_
             except Exception as e: display(_warn(f"Erreur durant la recherche : {e}")); return
-            best_score = searcher.best_score_; best_params = searcher.best_params_; best_model = searcher.best_estimator_
+            
             display(_section(f"Résultats — {model_name}", "#6366f1"))
             orig_score = self._cv_score_current(model, X_tr, y_tr, scoring, cv_splitter)
             gain = best_score - orig_score
@@ -200,7 +258,9 @@ class OptimizationUI:
             ax.set_xlabel(scoring, color=_GRAY); ax.set_title(f"Top {top_n} configurations — {model_name}", fontsize=11, fontweight="bold", color="#1e293b")
             for bar, mean in zip(bars, means[idx][::-1]):
                 ax.text(bar.get_width()+0.001, bar.get_y()+bar.get_height()/2, f"{mean:.4f}", va="center", fontsize=8, color="#1e293b")
-            plt.tight_layout(); plt.show()
+            plt.tight_layout()
+            display(fig)
+            plt.close(fig)
         except Exception: pass
 
     def _compare_all_models(self, X_tr, y_tr, scoring: str, cv) -> None:
