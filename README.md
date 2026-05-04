@@ -21,10 +21,10 @@ Explore the toolkit immediately by opening the provided notebook in Google Colab
 
 ## Installation
 
-Install the package directly from GitHub:
+Install the package directly from GitHub. Use these flags to bypass caches in environments like Colab or Binder:
 
 ```bash
-pip install git+https://github.com/dadflip/flipova-kitx.git
+pip install --upgrade --no-cache-dir --force-reinstall git+https://github.com/dadflip/flipova-kitx.git
 ```
 
 > **⚠️ If using Kaggle:** Kaggle disables internet access by default in new notebooks. If you get an `exit code: 128 (subprocess-exited-with-error)` while installing or cloning, you must enable internet: 

@@ -13,9 +13,9 @@ class DataSourceBlock:
         self.is_removable = is_removable
         self.on_remove = on_remove
         
-        self.name_in = widgets.Text(description="Nom:", value=name, layout=widgets.Layout(width="200px"))
-        self.type_dd = widgets.Dropdown(options=type_options, description="Format:", layout=widgets.Layout(width="200px"))
-        self.path_in = widgets.Text(description="Path/URI:", placeholder="chemin, url, etc.", layout=widgets.Layout(flex="1", min_width="250px"))
+        self.name_in = widgets.Text(description="Nom:", value=name, layout=widgets.Layout(width="180px"), style={"description_width": "initial"})
+        self.type_dd = widgets.Dropdown(options=type_options, description="Format:", layout=widgets.Layout(width="220px"), style={"description_width": "initial"})
+        self.path_in = widgets.Text(description="Path/URI:", placeholder="chemin, url, etc.", layout=widgets.Layout(flex="1", min_width="200px"), style={"description_width": "initial"})
         self.upload = widgets.FileUpload(accept="", multiple=False, description="Upload", layout=widgets.Layout(width="120px"))
         
         self.btn_preview = widgets.Button(description="Preview", button_style="info", layout=widgets.Layout(width="100px"))
@@ -58,27 +58,30 @@ class DataSourceBlock:
         for opt in opts:
             w = None
             lbl = opt.get("description", opt.get("label", opt["id"]))
+            style = {"description_width": "initial"}
+            layout = widgets.Layout(width="250px")
             if opt["type"] == "text":
-                w = widgets.Text(description=lbl, value=str(opt.get("value", "")), placeholder=opt.get("placeholder", ""), layout=widgets.Layout(width="250px"))
+                w = widgets.Text(description=lbl, value=str(opt.get("value", "")), placeholder=opt.get("placeholder", ""), layout=layout, style=style)
             elif opt["type"] == "dropdown":
                 if "options" in opt:
-                    w = widgets.Dropdown(options=opt["options"], value=opt.get("value"), description=lbl, layout=widgets.Layout(width="250px"))
+                    w = widgets.Dropdown(options=opt["options"], value=opt.get("value"), description=lbl, layout=layout, style=style)
                 else:
-                    w = widgets.Text(description=lbl, value=str(opt.get("value", "")), layout=widgets.Layout(width="250px"))
+                    w = widgets.Text(description=lbl, value=str(opt.get("value", "")), layout=layout, style=style)
             elif opt["type"] == "checkbox":
-                w = widgets.Checkbox(value=opt.get("value", False), description=lbl, layout=widgets.Layout(width="250px"))
+                w = widgets.Checkbox(value=opt.get("value", False), description=lbl, layout=layout, style=style, indent=False)
             elif opt["type"] == "floatslider":
-                w = widgets.FloatSlider(value=opt.get("value", 1.0), min=opt.get("min", 0.0), max=opt.get("max", 1.0), description=lbl, layout=widgets.Layout(width="300px"))
+                layout_sl = widgets.Layout(width="300px")
+                w = widgets.FloatSlider(value=opt.get("value", 1.0), min=opt.get("min", 0.0), max=opt.get("max", 1.0), description=lbl, layout=layout_sl, style=style)
                 
             if w:
                 help_text = widgets.HTML(f"<i style='font-size:0.8em; color:gray; line-height:28px;'>{opt.get('help', '')}</i>")
                 self.opt_widgets[opt["id"]] = w
-                boxes.append(widgets.HBox([w, help_text], layout=widgets.Layout(margin="0 5px")))
+                boxes.append(widgets.HBox([w, help_text], layout=widgets.Layout(margin="0 10px 10px 0")))
                 
         if not boxes:
             boxes.append(widgets.HTML("<i style='color:gray; font-size: 0.9em;'>Aucune option avancée.</i>"))
             
-        self.dynamic_opts.children = [widgets.HBox(boxes, layout=widgets.Layout(flex_wrap="wrap", padding="5px 0 0 50px"))]
+        self.dynamic_opts.children = [widgets.HBox(boxes, layout=widgets.Layout(flex_wrap="wrap", padding="10px 0 0 5px"))]
 
     def _get_data(self):
         ds_type = self.type_dd.value
@@ -215,25 +218,28 @@ class DataLoaderUI:
         for opt in opts:
             w = None
             lbl = opt.get("label", opt["id"])
+            style = {"description_width": "initial"}
+            layout = widgets.Layout(width="250px")
             if opt["type"] == "text":
-                w = widgets.Text(description=lbl, value=str(opt.get("value", "")), placeholder=opt.get("placeholder", ""))
+                w = widgets.Text(description=lbl, value=str(opt.get("value", "")), placeholder=opt.get("placeholder", ""), layout=layout, style=style)
             elif opt["type"] == "dropdown":
                 if "options" in opt:
-                    w = widgets.Dropdown(options=opt["options"], value=opt.get("value"), description=lbl)
+                    w = widgets.Dropdown(options=opt["options"], value=opt.get("value"), description=lbl, layout=layout, style=style)
                 else:
-                    w = widgets.Text(description=lbl, value=str(opt.get("value", "")))
+                    w = widgets.Text(description=lbl, value=str(opt.get("value", "")), layout=layout, style=style)
             elif opt["type"] == "checkbox":
-                w = widgets.Checkbox(value=opt.get("value", False), description=lbl)
+                w = widgets.Checkbox(value=opt.get("value", False), description=lbl, layout=layout, style=style, indent=False)
             elif opt["type"] == "floatslider":
-                w = widgets.FloatSlider(value=opt.get("value", 1.0), min=opt.get("min", 0.0), max=opt.get("max", 1.0), description=lbl)
+                layout_sl = widgets.Layout(width="300px")
+                w = widgets.FloatSlider(value=opt.get("value", 1.0), min=opt.get("min", 0.0), max=opt.get("max", 1.0), description=lbl, layout=layout_sl, style=style)
                 
             if w:
                 help_text = widgets.HTML(f"<i style='font-size:0.8em; color:gray; line-height:28px;'>{opt.get('help', '')}</i>")
                 self.mode_opt_widgets[opt["id"]] = w
-                boxes.append(widgets.HBox([w, help_text]))
+                boxes.append(widgets.HBox([w, help_text], layout=widgets.Layout(margin="0 10px 10px 0")))
                 
         if boxes:
-            self.mode_opts_container.children = [widgets.HTML("<b>Mode Config:</b>"), widgets.HBox(boxes, layout=widgets.Layout(flex_wrap="wrap", grid_gap="10px"))]
+            self.mode_opts_container.children = [widgets.HTML("<b>Mode Config:</b>"), widgets.HBox(boxes, layout=widgets.Layout(flex_wrap="wrap", margin="5px 0"))]
             self.mode_opts_container.layout.display = "block"
         else:
             self.mode_opts_container.children = []
