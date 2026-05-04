@@ -1,2 +1,2 @@
-from .ui import InstallerUI
+from .ui.base import InstallerUI
 __all__ = ["InstallerUI"]

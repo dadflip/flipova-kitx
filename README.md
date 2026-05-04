@@ -7,6 +7,8 @@ A dynamic, interactive Machine Learning toolkit designed for Jupyter Notebooks a
 ## Quickstart
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/dadflip/flipova-kitx/blob/main/notebook.ipynb)
+[![Open In Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://kaggle.com/kernels/welcome?src=https://github.com/dadflip/flipova-kitx/blob/main/notebook.ipynb)
+[![Launch Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/dadflip/flipova-kitx/main?filepath=notebook.ipynb)
 
 Explore the toolkit immediately by opening the provided notebook in Google Colab.
 
