@@ -1,0 +1,8 @@
+{
+  "name": "datakit-ml",
+  "version": "1.0.0",
+  "description": "ML Pipeline",
+  "scripts": {
+    "build": "echo 'No build required'"
+  }
+}
