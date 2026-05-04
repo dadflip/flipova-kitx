@@ -43,7 +43,7 @@ id = "boosting"
 label = "Gradient Boosting (XGBoost, LightGBM, CatBoost)"
 packages = ["xgboost", "lightgbm", "catboost"]
 check = ["xgboost", "lightgbm", "catboost"]
-default = true
+default = false
 required = false
 
 [[environment.packages.groups]]
@@ -51,7 +51,7 @@ id = "cat_encoders"
 label = "Category Encoders"
 packages = ["category_encoders"]
 check = ["category_encoders"]
-default = true
+default = false
 required = false
 
 [[environment.packages.groups]]
@@ -83,7 +83,7 @@ id = "vision"
 label = "Computer Vision (OpenCV, Pillow)"
 packages = ["opencv-python-headless", "Pillow"]
 check = ["cv2", "PIL"]
-default = true
+default = false
 required = false
 
 [[environment.packages.groups]]
@@ -91,7 +91,7 @@ id = "graph"
 label = "Graph (NetworkX)"
 packages = ["networkx"]
 check = ["networkx"]
-default = true
+default = false
 required = false
 
 [[environment.packages.groups]]
@@ -99,7 +99,7 @@ id = "ontology"
 label = "Ontologie (rdflib, owlready2)"
 packages = ["rdflib", "owlready2"]
 check = ["rdflib", "owlready2"]
-default = true
+default = false
 required = false
 
 [[environment.packages.groups]]
@@ -147,7 +147,7 @@ id = "arrow"
 label = "Columnar (PyArrow)"
 packages = ["pyarrow"]
 check = ["pyarrow"]
-default = true
+default = false
 required = false
 
 [[environment.packages.groups]]

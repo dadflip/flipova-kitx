@@ -7,7 +7,7 @@ from ml_pipeline.styles import styles
 from ml_pipeline.steps.eda.logic.ontology import (
     get_ontology_stats, get_ontology_graph_fig, 
     get_ontology_hierarchy_fig, get_namespaces_fig, _short,
-    get_ontology_domain_range
+    get_ontology_domain_range, get_ontology_schema_fig
 )
 
 def build_ontology_ui(eda_ui, g) -> None:
@@ -128,23 +128,34 @@ def build_ontology_ui(eda_ui, g) -> None:
     hier_btn.on_click(_build_hierarchy)
     hier_tab = widgets.VBox([hier_btn, hier_out])
 
-    # ── Tab 5 : Domain & Range checker
-    domran_out = widgets.Output()
-    domran_btn = widgets.Button(description="Check Domain & Range", button_style=styles.BTN_PRIMARY)
-    def _build_domran(_=None):
-        with domran_out:
+    # ── Tab 5 : Schema (Domain & Range)
+    schema_out = widgets.Output()
+    schema_btn = widgets.Button(description="Afficher Schéma (Domaines / Ranges)", button_style=styles.BTN_PRIMARY)
+    def _build_schema(_=None):
+        with schema_out:
             clear_output(wait=True)
             res = get_ontology_domain_range(g)
-            if res:
-                display(pd.DataFrame(res).set_index("Property"))
+            
+            fig = get_ontology_schema_fig(g)
+            if fig:
+                display(fig)
+                plt.close(fig)
             else:
-                print("No domain/range definitions found.")
-    domran_btn.on_click(_build_domran)
-    domran_tab = widgets.VBox([domran_btn, domran_out])
+                print("Pas de relations domaine/range pour le schéma visuel.")
+                
+            if res:
+                display(HTML("<b style='color:#374151;font-size:0.9em;margin-top:10px;display:block;'>Tableau récapitulatif</b>"))
+                display(pd.DataFrame(res).set_index("Property"))
+
+    schema_btn.on_click(_build_schema)
+    schema_tab = widgets.VBox([
+        styles.help_box("Affiche la structure abstraite de l'ontologie (classes et leurs relations) basée sur RDFS.domain et RDFS.range.", "#8b5cf6"),
+        schema_btn, schema_out
+    ])
 
     # ── Assemblage 
-    onto_tabs = widgets.Tab(children=[stats_out, graph_tab, triplets_tab, hier_tab, domran_tab])
-    for i, title in enumerate(["Stats & Overview", "Interactive Graph", "Triplets Query", "Class Hierarchy", "Domain & Range"]):
+    onto_tabs = widgets.Tab(children=[stats_out, graph_tab, triplets_tab, hier_tab, schema_tab])
+    for i, title in enumerate(["Stats & Overview", "Interactive Graph", "Triplets Query", "Class Hierarchy", "Ontology Schema"]):
         onto_tabs.set_title(i, title)
 
     eda_ui.dynamic_ui.children = [onto_tabs]

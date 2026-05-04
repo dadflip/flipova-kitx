@@ -19,10 +19,10 @@ def build_video_ui(eda_ui, video_source):
 
     # Tool 1: Info & Player
     out_info = widgets.Output()
+    info = get_video_info(video_source)
     def _show_info():
         with out_info:
             clear_output(wait=True)
-            info = get_video_info(video_source)
             display(HTML("<b style='color:#374151;font-size:0.9em;'>Video Info</b>"))
             display(pd.DataFrame([info]).T.rename(columns={0: "Value"}))
             # Display basic HTML5 video player if local

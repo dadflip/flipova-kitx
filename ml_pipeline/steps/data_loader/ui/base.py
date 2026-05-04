@@ -15,12 +15,18 @@ class DataSourceBlock:
         
         self.name_in = widgets.Text(description="Nom:", value=name, layout=widgets.Layout(width="180px"), style={"description_width": "initial"})
         self.type_dd = widgets.Dropdown(options=type_options, description="Format:", layout=widgets.Layout(width="220px"), style={"description_width": "initial"})
-        self.src_mode = widgets.Dropdown(options=["URL/Chemin", "Upload", "Presse-papier"], value="URL/Chemin", layout=widgets.Layout(width="120px"))
-        self.path_in = widgets.Text(placeholder="http://...", layout=widgets.Layout(flex="1", min_width="200px"))
+        self.src_mode = widgets.Dropdown(options=["URL/Chemin", "Upload", "Presse-papier", "Dossier Local"], value="URL/Chemin", layout=widgets.Layout(width="120px"))
+        self.path_in = widgets.Text(placeholder="http:// ou /chemin...", layout=widgets.Layout(flex="1", min_width="200px"))
         self.upload = widgets.FileUpload(accept="", multiple=False, layout=widgets.Layout(width="250px", display="none"))
         self.paste_in = widgets.Textarea(placeholder="Collez ici...", layout=widgets.Layout(flex="1", height="40px", min_width="200px", display="none"))
         
+        self.chk_recursive = widgets.Checkbox(value=False, description="Récursif", layout=widgets.Layout(width="100px", display="none"))
+        self.btn_scan = widgets.Button(description="Scanner", button_style="info", layout=widgets.Layout(width="80px", display="none"))
+        self.file_list_box = widgets.VBox([], layout=widgets.Layout(max_height="200px", overflow="auto", display="none", border="1px solid #ccc", margin="5px 0"))
+        self.file_checkboxes = {}
+        
         self.btn_preview = widgets.Button(description="Preview", button_style="info", layout=widgets.Layout(width="100px"))
+        self.btn_scan.on_click(self._on_scan)
         self.btn_preview.on_click(self._on_preview)
         
         if self.is_removable:
@@ -48,8 +54,11 @@ class DataSourceBlock:
                 self.path_in,
                 self.upload,
                 self.paste_in,
+                self.chk_recursive,
+                self.btn_scan,
                 self.btn_preview
             ], layout=widgets.Layout(align_items="center", flex_wrap="wrap", grid_gap="5px")),
+            self.file_list_box,
             self.dynamic_opts,
             self.out_preview
         ], layout=widgets.Layout(border="1px solid #e5e7eb", padding="10px", margin="10px 0", border_radius="8px", background_color="#fcfcfc"))
@@ -82,6 +91,7 @@ class DataSourceBlock:
             self.upload.value = () if isinstance(self.upload.value, tuple) else {}
             clear_output()
             print(f"✅ Fichier '{safe_name}' uploadé et sauvegardé dans '{file_path}'.\nChemin défini pour chargement/preview.")
+            self._on_preview(None)
 
     def _on_src_mode_changed(self, change):
         val = change.new
@@ -89,14 +99,32 @@ class DataSourceBlock:
             self.path_in.layout.display = "none"
             self.paste_in.layout.display = "none"
             self.upload.layout.display = "flex"
+            self.chk_recursive.layout.display = "none"
+            self.btn_scan.layout.display = "none"
+            self.file_list_box.layout.display = "none"
         elif val == "Presse-papier":
             self.path_in.layout.display = "none"
             self.upload.layout.display = "none"
             self.paste_in.layout.display = "flex"
+            self.chk_recursive.layout.display = "none"
+            self.btn_scan.layout.display = "none"
+            self.file_list_box.layout.display = "none"
+        elif val == "Dossier Local":
+            self.upload.layout.display = "none"
+            self.paste_in.layout.display = "none"
+            self.path_in.layout.display = "flex"
+            self.path_in.placeholder = "Chemin du dossier..."
+            self.chk_recursive.layout.display = "flex"
+            self.btn_scan.layout.display = "flex"
+            self.file_list_box.layout.display = "flex"
         else:
             self.upload.layout.display = "none"
             self.paste_in.layout.display = "none"
             self.path_in.layout.display = "flex"
+            self.path_in.placeholder = "http:// ou /chemin..."
+            self.chk_recursive.layout.display = "none"
+            self.btn_scan.layout.display = "none"
+            self.file_list_box.layout.display = "none"
 
     def _update_adv_opts(self, change=None):
         ds_type = self.type_dd.value
@@ -150,6 +178,41 @@ class DataSourceBlock:
         else:
             self.dynamic_opts.children = [widgets.HTML("<i style='color:gray; font-size: 0.9em; margin-left:10px;'>Aucune option avancée.</i>")]
 
+    def _on_scan(self, b):
+        import os
+        from glob import glob
+        path = self.path_in.value
+        recursive = self.chk_recursive.value
+        
+        self.file_checkboxes.clear()
+        self.file_list_box.children = [widgets.HTML("<i>Recherche de fichiers...</i>")]
+        
+        if not path or not os.path.isdir(path):
+            self.file_list_box.children = [widgets.HTML("<i style='color:red;'>Chemin invalide ou non trouvé.</i>")]
+            return
+            
+        search_pattern = os.path.join(path, "**", "*") if recursive else os.path.join(path, "*")
+        files = [f for f in glob(search_pattern, recursive=recursive) if os.path.isfile(f)]
+        
+        if not files:
+            self.file_list_box.children = [widgets.HTML("<i>Aucun fichier trouvé.</i>")]
+            return
+            
+        chk_widgets = []
+        for f in sorted(files):
+            # Display relative path for brevity if inside path, else just basename
+            display_name = os.path.relpath(f, start=path) if recursive else os.path.basename(f)
+            chk = widgets.Checkbox(value=True, description=display_name, layout=widgets.Layout(width="auto"), style={"description_width": "initial"})
+            self.file_checkboxes[f] = chk
+            chk_widgets.append(chk)
+            
+        actions = widgets.HBox([
+            widgets.Button(description="Tout sélectionner", on_click=lambda b: [setattr(c, 'value', True) for c in self.file_checkboxes.values()]),
+            widgets.Button(description="Tout désélectionner", on_click=lambda b: [setattr(c, 'value', False) for c in self.file_checkboxes.values()])
+        ], layout=widgets.Layout(margin="5px 0"))
+        
+        self.file_list_box.children = [actions] + chk_widgets
+
     def _get_data(self):
         ds_type = self.type_dd.value
         adv_options = {k: w.value for k, w in self.opt_widgets.items()}
@@ -189,6 +252,18 @@ class DataSourceBlock:
             src_content = val
             if val.startswith("http"): src_type = "url"
             else: src_type = "local"
+        elif mode == "Dossier Local":
+            selected_files = [f for f, chk in self.file_checkboxes.items() if chk.value]
+            if not selected_files:
+                return None, "Aucun fichier sélectionné dans le dossier."
+            
+            loaded_dict = {}
+            for f in selected_files:
+                try:
+                    loaded_dict[f] = load_data(ds_type, "local", f, adv_options)
+                except Exception as e:
+                    print(f"Erreur sur {f}: {e}")
+            return loaded_dict, None
         else:
             return None, "Aucune source spécifiée pour ce mode."
             
@@ -210,6 +285,21 @@ class DataSourceBlock:
             
             ds_type = self.type_dd.value
             display(HTML(f"<b>Aperçu pour '{self.name_in.value}' (Type: {ds_type}) :</b>"))
+            
+            if isinstance(data, dict) and self.src_mode.value == "Dossier Local":
+                display(HTML(f"<i>Dossier chargé avec {len(data)} éléments.</i>"))
+                keys = list(data.keys())
+                if keys:
+                    display(HTML(f"<b>Aperçu du premier élément ({keys[0]}):</b>"))
+                    first_data = data[keys[0]]
+                    if isinstance(first_data, pd.DataFrame):
+                        display(first_data.head(5))
+                    elif ds_type == "image":
+                        display(first_data)
+                    else:
+                        print(str(first_data)[:500] + "..." if len(str(first_data)) > 500 else str(first_data))
+                return
+                
             if isinstance(data, pd.DataFrame):
                 display(data.head(5))
                 display(HTML(f"<i>Total rows: {len(data)}, Total columns: {len(data.columns)}</i>"))

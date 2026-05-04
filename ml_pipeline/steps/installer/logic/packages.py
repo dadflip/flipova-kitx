@@ -15,3 +15,10 @@ def install_packages(packages):
         return True, "Success"
     except Exception as e:
         return False, str(e)
+
+def uninstall_packages(packages):
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "uninstall", "-y", *packages])
+        return True, "Success"
+    except Exception as e:
+        return False, str(e)

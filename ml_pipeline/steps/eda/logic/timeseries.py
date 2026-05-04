@@ -60,12 +60,13 @@ def get_ts_seasonal_decompose(df: pd.DataFrame, col: str, time_col: str, period:
 def get_ts_acf_pacf(df: pd.DataFrame, col: str, time_col: str, lags: int = 40):
     s = df[col] if time_col == "Index" else df.set_index(time_col)[col]
     s = s.dropna()
+    n_lags = min(lags, max(1, len(s) // 2 - 1))
     try:
         from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
         fig, axes = plt.subplots(1, 2, figsize=(14, 5))
         fig.patch.set_facecolor("#f8fafc")
-        plot_acf(s, lags=lags, ax=axes[0])
-        plot_pacf(s, lags=lags, ax=axes[1])
+        plot_acf(s, lags=n_lags, ax=axes[0])
+        plot_pacf(s, lags=n_lags, ax=axes[1])
         plt.tight_layout()
         return fig
     except ImportError:

@@ -146,7 +146,51 @@ class UltimateEDA:
         orig_key = self.current_ds.split(" ", 1)[1] if " " in self.current_ds else self.current_ds
         ds_type = self.state.data_types.get(orig_key, "tabular")
         
-        if ds_type in ("tabular", "sklearn", "clipboard", "excel") or (isinstance(data, pd.DataFrame) and ds_type != "timeseries"):
+        # --- Gestion des Dictionnaires (Dossier Local) ---
+        if isinstance(data, dict) and not isinstance(data, pd.DataFrame) and ds_type not in ("json", "web", "neo4j"):
+            # Cas spécial : Ontologie
+            if ds_type == "ontology":
+                import rdflib
+                merged_g = rdflib.Graph()
+                for g in data.values():
+                    if isinstance(g, rdflib.Graph):
+                        merged_g += g
+                self._dispatch_type(ds_type, merged_g)
+            else:
+                self._build_folder_ui(ds_type, data)
+        else:
+            self._dispatch_type(ds_type, data)
+
+    def _build_folder_ui(self, ds_type, data_dict):
+        # UI pour explorer un dossier (sélection d'un fichier à explorer)
+        keys = list(data_dict.keys())
+        if not keys:
+            self.dynamic_ui.children = [widgets.HTML("<i style='color:red;'>Dossier vide.</i>")]
+            return
+            
+        dropdown = widgets.Dropdown(options=keys, description="Fichier:", layout=widgets.Layout(width="300px"))
+        container = widgets.VBox([])
+        
+        def _on_file_select(change):
+            selected = change["new"] if change else dropdown.value
+            file_data = data_dict[selected]
+            
+            old_dynamic = self.dynamic_ui
+            self.dynamic_ui = container
+            self._dispatch_type(ds_type, file_data)
+            self.dynamic_ui = old_dynamic
+
+        dropdown.observe(_on_file_select, names="value")
+        _on_file_select(None)
+        
+        self.dynamic_ui.children = [
+            widgets.HTML(f"<div style='margin-bottom:10px; font-weight:bold;'>Mode Dossier - Exploration d'un fichier à la fois ({len(keys)} éléments)</div>"),
+            dropdown,
+            container
+        ]
+
+    def _dispatch_type(self, ds_type, data):
+        if ds_type in ("tabular", "csv", "sklearn", "clipboard", "excel") or (isinstance(data, pd.DataFrame) and ds_type != "timeseries"):
             from .tabular import build_tabular_ui
             build_tabular_ui(self, data)
         elif ds_type == "timeseries":

@@ -71,7 +71,7 @@ def get_ontology_graph_fig(g, max_edges: int, lay: str, allowed_relations: list)
     if G.number_of_nodes() == 0:
         return None
 
-    fig, ax = plt.subplots(figsize=(12, 7))
+    fig, ax = plt.subplots(figsize=(14, 8))
     fig.patch.set_facecolor("#f8fafc"); ax.set_facecolor("#f8fafc")
     try:
         if lay == "kamada_kawai":
@@ -81,42 +81,45 @@ def get_ontology_graph_fig(g, max_edges: int, lay: str, allowed_relations: list)
         elif lay == "shell":
             pos = nx.shell_layout(G)
         else:
-            pos = nx.spring_layout(G, k=2.0, seed=42)
+            pos = nx.spring_layout(G, k=2.5, seed=42)
     except Exception:
-        pos = nx.spring_layout(G, k=2.0, seed=42)
+        pos = nx.spring_layout(G, k=2.5, seed=42)
 
-    node_colors = []
-    for node in G.nodes():
-        if G.in_degree(node) == 0:
-            node_colors.append("#3b82f6")
-        elif G.out_degree(node) == 0:
-            node_colors.append("#10b981")
-        else:
-            node_colors.append("#8b5cf6")
-            
-    nx.draw_networkx_nodes(G, pos, node_color=node_colors,
-                           node_size=500, alpha=0.88, ax=ax)
-    nx.draw_networkx_labels(G, pos, font_size=7, font_color="white",
-                            font_weight="bold", ax=ax)
+    # Do not draw networkx defaults, construct bounded labels
     nx.draw_networkx_edges(G, pos, edge_color="#94a3b8",
                            arrows=True, arrowsize=14,
-                           connectionstyle="arc3,rad=0.1", ax=ax)
+                           connectionstyle="arc3,rad=0.1", ax=ax, node_size=1000)
+    
+    for node in G.nodes():
+        if G.in_degree(node) == 0:
+            facecolor = "#bae6fd" # light blue
+        elif G.out_degree(node) == 0:
+            facecolor = "#a7f3d0" # light green
+        else:
+            facecolor = "#ddd6fe" # light purple
+            
+        ax.text(pos[node][0], pos[node][1], str(node), 
+                fontsize=8, color="black", 
+                ha="center", va="center", fontweight="bold",
+                bbox=dict(boxstyle="round,pad=0.5", facecolor=facecolor, edgecolor="gray", alpha=0.9))
+
     edge_labels = nx.get_edge_attributes(G, "label")
     nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels,
-                                  font_size=6, font_color="#475569", ax=ax)
+                                  font_size=7, font_color="#475569", ax=ax)
                                   
     ax.set_title(
-        f"Graphe ontologique — {G.number_of_nodes()} nœuds · {G.number_of_edges()} arêtes "
+        f"Graphe ontologique (complet) — {G.number_of_nodes()} nœuds · {G.number_of_edges()} arêtes "
         f"· layout={lay}",
-        fontsize=9, color="#374151")
-    ax.axis("off")
+        color="#334155", fontsize=11, weight="bold"
+    )
+    plt.axis('off')
     
     from matplotlib.patches import Patch
-    legend = [Patch(color="#3b82f6", label="Racines"),
-              Patch(color="#8b5cf6", label="Intermédiaires"),
-              Patch(color="#10b981", label="Feuilles")]
-    ax.legend(handles=legend, loc="lower right", fontsize=7,
-              framealpha=0.8, edgecolor="#e5e7eb")
+    legend = [Patch(color="#bae6fd", label="Racines"),
+              Patch(color="#ddd6fe", label="Intermédiaires"),
+              Patch(color="#a7f3d0", label="Feuilles")]
+    ax.legend(handles=legend, loc="lower right", fontsize=8,
+              framealpha=0.9, edgecolor="#e5e7eb")
     plt.tight_layout()
     return fig
 
@@ -145,30 +148,92 @@ def get_ontology_hierarchy_fig(g, max_hier: int) -> plt.Figure | None:
     except Exception:
         pos = nx.spring_layout(H, k=2.5, seed=42)
         
-    fig, ax = plt.subplots(figsize=(12, 7))
+    fig, ax = plt.subplots(figsize=(14, 8))
     fig.patch.set_facecolor("#f8fafc"); ax.set_facecolor("#f8fafc")
     roots = [n for n in H.nodes() if H.in_degree(n) == 0]
     leaves = [n for n in H.nodes() if H.out_degree(n) == 0]
-    node_colors = [
-        "#3b82f6" if n in roots else
-        "#10b981" if n in leaves else "#8b5cf6"
-        for n in H.nodes()
-    ]
-    nx.draw_networkx_nodes(H, pos, node_color=node_colors,
-                           node_size=450, alpha=0.88, ax=ax)
-    nx.draw_networkx_labels(H, pos, font_size=7, font_color="white",
-                            font_weight="bold", ax=ax)
+    
     nx.draw_networkx_edges(H, pos, edge_color="#94a3b8",
-                           arrows=True, arrowsize=12, ax=ax)
+                           arrows=True, arrowsize=14, ax=ax, node_size=1000)
+    
+    for node in H.nodes():
+        if node in roots:
+            facecolor = "#bae6fd" # light blue
+        elif node in leaves:
+            facecolor = "#a7f3d0" # light green
+        else:
+            facecolor = "#ddd6fe" # light purple
+            
+        ax.text(pos[node][0], pos[node][1], str(node), 
+                fontsize=8, color="black", 
+                ha="center", va="center", fontweight="bold",
+                bbox=dict(boxstyle="round,pad=0.5", facecolor=facecolor, edgecolor="gray", alpha=0.9))
+
     ax.set_title(
         f"Hiérarchie de classes (subClassOf) — {H.number_of_nodes()} classes",
-        fontsize=9, color="#374151")
+        color="#334155", fontsize=11, weight="bold"
+    )
     ax.axis("off")
     from matplotlib.patches import Patch
-    legend = [Patch(color="#3b82f6", label="Racines (Thing)"),
-              Patch(color="#8b5cf6", label="Intermédiaires"),
-              Patch(color="#10b981", label="Feuilles")]
-    ax.legend(handles=legend, loc="lower right", fontsize=7, framealpha=0.8)
+    legend = [Patch(color="#bae6fd", label="Racines"),
+              Patch(color="#ddd6fe", label="Intermédiaires"),
+              Patch(color="#a7f3d0", label="Feuilles")]
+    ax.legend(handles=legend, loc="lower right", fontsize=8, framealpha=0.9, edgecolor="#e5e7eb")
+    plt.tight_layout()
+    return fig
+
+def get_ontology_schema_fig(g) -> plt.Figure | None:
+    if not hasattr(g, "triples"): return None
+    try:
+        from rdflib.namespace import RDFS
+        import networkx as nx
+    except ImportError:
+        return None
+
+    S = nx.DiGraph()
+    prop_edges = {}
+    for s, _, o in g.triples((None, RDFS.domain, None)):
+        prop_edges[_short(s)] = {'domain': _short(o)}
+    for s, _, o in g.triples((None, RDFS.range, None)):
+        if _short(s) not in prop_edges:
+            prop_edges[_short(s)] = {}
+        prop_edges[_short(s)]['range'] = _short(o)
+        
+    for p, dr in prop_edges.items():
+        if 'domain' in dr and 'range' in dr:
+            d, r = dr['domain'], dr['range']
+            if d and r:
+                S.add_edge(d, r, label=p)
+    
+    if S.number_of_nodes() == 0:
+        return None
+
+    fig, ax = plt.subplots(figsize=(14, 8))
+    fig.patch.set_facecolor("#f8fafc"); ax.set_facecolor("#f8fafc")
+    try:
+        pos = nx.spring_layout(S, k=3.0, seed=42)
+    except:
+        return None
+
+    nx.draw_networkx_edges(S, pos, edge_color="#94a3b8",
+                           arrows=True, arrowsize=14, ax=ax, node_size=1000)
+    
+    for node in S.nodes():
+        facecolor = "#fef08a" # yellow
+        ax.text(pos[node][0], pos[node][1], str(node), 
+                fontsize=9, color="black", 
+                ha="center", va="center", fontweight="bold",
+                bbox=dict(boxstyle="round,pad=0.5", facecolor=facecolor, edgecolor="gray", alpha=0.9))
+
+    edge_labels = nx.get_edge_attributes(S, "label")
+    nx.draw_networkx_edge_labels(S, pos, edge_labels=edge_labels,
+                                  font_size=8, font_color="#475569", ax=ax)
+                                  
+    ax.set_title(
+        f"Schéma Récapitulatif (Domaines et Ranges)",
+        color="#334155", fontsize=11, weight="bold"
+    )
+    plt.axis('off')
     plt.tight_layout()
     return fig
 
