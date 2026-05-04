@@ -59,7 +59,8 @@ class DataSourceBlock:
             w = None
             lbl = opt.get("description", opt.get("label", opt["id"]))
             style = {"description_width": "initial"}
-            layout = widgets.Layout(width="250px")
+            layout = widgets.Layout(width="100%", max_width="300px")
+            
             if opt["type"] == "text":
                 w = widgets.Text(description=lbl, value=str(opt.get("value", "")), placeholder=opt.get("placeholder", ""), layout=layout, style=style)
             elif opt["type"] == "dropdown":
@@ -68,20 +69,22 @@ class DataSourceBlock:
                 else:
                     w = widgets.Text(description=lbl, value=str(opt.get("value", "")), layout=layout, style=style)
             elif opt["type"] == "checkbox":
-                w = widgets.Checkbox(value=opt.get("value", False), description=lbl, layout=layout, style=style, indent=False)
+                w = widgets.Checkbox(value=opt.get("value", False), description=lbl, layout=widgets.Layout(width="max-content"), style=style, indent=False)
             elif opt["type"] == "floatslider":
-                layout_sl = widgets.Layout(width="300px")
+                layout_sl = widgets.Layout(width="100%", max_width="350px")
                 w = widgets.FloatSlider(value=opt.get("value", 1.0), min=opt.get("min", 0.0), max=opt.get("max", 1.0), description=lbl, layout=layout_sl, style=style)
                 
             if w:
-                help_text = widgets.HTML(f"<i style='font-size:0.8em; color:gray; line-height:28px;'>{opt.get('help', '')}</i>")
+                help_text = widgets.HTML(f"<div style='font-size:0.8em; color:gray; padding-left:5px; margin-top:2px;'>{opt.get('help', '')}</div>")
                 self.opt_widgets[opt["id"]] = w
-                boxes.append(widgets.HBox([w, help_text], layout=widgets.Layout(margin="0 10px 10px 0")))
+                # Use a VBox to place help text underneath, and give it flex-basis to fill columns
+                box = widgets.VBox([w, help_text], layout=widgets.Layout(min_width="220px", flex="1 1 auto", margin="5px 10px 10px 0"))
+                boxes.append(box)
                 
         if not boxes:
             boxes.append(widgets.HTML("<i style='color:gray; font-size: 0.9em;'>Aucune option avancée.</i>"))
             
-        self.dynamic_opts.children = [widgets.HBox(boxes, layout=widgets.Layout(flex_wrap="wrap", padding="10px 0 0 5px"))]
+        self.dynamic_opts.children = [widgets.HBox(boxes, layout=widgets.Layout(flex_wrap="wrap", padding="10px 0 0 5px", width="100%"))]
 
     def _get_data(self):
         ds_type = self.type_dd.value
@@ -219,7 +222,8 @@ class DataLoaderUI:
             w = None
             lbl = opt.get("label", opt["id"])
             style = {"description_width": "initial"}
-            layout = widgets.Layout(width="250px")
+            layout = widgets.Layout(width="100%", max_width="300px")
+            
             if opt["type"] == "text":
                 w = widgets.Text(description=lbl, value=str(opt.get("value", "")), placeholder=opt.get("placeholder", ""), layout=layout, style=style)
             elif opt["type"] == "dropdown":
@@ -228,18 +232,19 @@ class DataLoaderUI:
                 else:
                     w = widgets.Text(description=lbl, value=str(opt.get("value", "")), layout=layout, style=style)
             elif opt["type"] == "checkbox":
-                w = widgets.Checkbox(value=opt.get("value", False), description=lbl, layout=layout, style=style, indent=False)
+                w = widgets.Checkbox(value=opt.get("value", False), description=lbl, layout=widgets.Layout(width="max-content"), style=style, indent=False)
             elif opt["type"] == "floatslider":
-                layout_sl = widgets.Layout(width="300px")
+                layout_sl = widgets.Layout(width="100%", max_width="350px")
                 w = widgets.FloatSlider(value=opt.get("value", 1.0), min=opt.get("min", 0.0), max=opt.get("max", 1.0), description=lbl, layout=layout_sl, style=style)
                 
             if w:
-                help_text = widgets.HTML(f"<i style='font-size:0.8em; color:gray; line-height:28px;'>{opt.get('help', '')}</i>")
+                help_text = widgets.HTML(f"<div style='font-size:0.8em; color:gray; padding-left:5px; margin-top:2px;'>{opt.get('help', '')}</div>")
                 self.mode_opt_widgets[opt["id"]] = w
-                boxes.append(widgets.HBox([w, help_text], layout=widgets.Layout(margin="0 10px 10px 0")))
+                box = widgets.VBox([w, help_text], layout=widgets.Layout(min_width="220px", flex="1 1 auto", margin="5px 10px 10px 0"))
+                boxes.append(box)
                 
         if boxes:
-            self.mode_opts_container.children = [widgets.HTML("<b>Mode Config:</b>"), widgets.HBox(boxes, layout=widgets.Layout(flex_wrap="wrap", margin="5px 0"))]
+            self.mode_opts_container.children = [widgets.HTML("<b>Mode Config:</b>"), widgets.HBox(boxes, layout=widgets.Layout(flex_wrap="wrap", margin="5px 0", width="100%"))]
             self.mode_opts_container.layout.display = "block"
         else:
             self.mode_opts_container.children = []
