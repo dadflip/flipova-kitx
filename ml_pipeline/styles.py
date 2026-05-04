@@ -7,16 +7,35 @@ class PipelineStyles:
     """Styles UI unifiés pour tout le pipeline ML."""
 
     # ── Layouts ───────────────────────────────────────────────────────────────
-    LAYOUT_DD        = widgets.Layout(width="300px")
-    LAYOUT_DD_LONG   = widgets.Layout(width="400px")
-    LAYOUT_TEXT      = widgets.Layout(width="300px")
-    LAYOUT_BTN_STD   = widgets.Layout(width="auto") # Changé à auto
-    LAYOUT_BTN_LARGE = widgets.Layout(width="auto") # Changé à auto
-    LAYOUT_BOX       = widgets.Layout(padding="12px", border="1px solid #e2e8f0", border_radius="8px", margin="12px 0")
-    LAYOUT_ROW       = widgets.Layout(align_items="center", gap="12px", margin="8px 0")
-    LAYOUT_SECTION   = widgets.Layout(border="1px solid #cbd5e1", border_radius="8px", padding="10px", margin="10px 0")
-    LAYOUT_W95       = widgets.Layout(width="95%")
-    LAYOUT_AUTO      = widgets.Layout(width="auto")
+    @property
+    def LAYOUT_DD(self): return widgets.Layout(width="300px")
+    
+    @property
+    def LAYOUT_DD_LONG(self): return widgets.Layout(width="400px")
+    
+    @property
+    def LAYOUT_TEXT(self): return widgets.Layout(width="300px")
+    
+    @property
+    def LAYOUT_BTN_STD(self): return widgets.Layout(width="auto")
+
+    @property
+    def LAYOUT_BTN_LARGE(self): return widgets.Layout(width="auto")
+
+    @property
+    def LAYOUT_BOX(self): return widgets.Layout(padding="12px", border="1px solid #e2e8f0", border_radius="8px", margin="12px 0")
+    
+    @property
+    def LAYOUT_ROW(self): return widgets.Layout(align_items="center", gap="12px", margin="8px 0")
+    
+    @property
+    def LAYOUT_SECTION(self): return widgets.Layout(border="1px solid #cbd5e1", border_radius="8px", padding="10px", margin="10px 0")
+    
+    @property
+    def LAYOUT_W95(self): return widgets.Layout(width="95%")
+    
+    @property
+    def LAYOUT_AUTO(self): return widgets.Layout(width="auto")
 
     # ── Button styles ─────────────────────────────────────────────────────────
     BTN_PRIMARY = "primary"

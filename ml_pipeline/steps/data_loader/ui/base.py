@@ -15,8 +15,10 @@ class DataSourceBlock:
         
         self.name_in = widgets.Text(description="Nom:", value=name, layout=widgets.Layout(width="180px"), style={"description_width": "initial"})
         self.type_dd = widgets.Dropdown(options=type_options, description="Format:", layout=widgets.Layout(width="220px"), style={"description_width": "initial"})
-        self.path_in = widgets.Text(description="Path/URI:", placeholder="chemin, url, etc.", layout=widgets.Layout(flex="1", min_width="200px"), style={"description_width": "initial"})
-        self.upload = widgets.FileUpload(accept="", multiple=False, description="Upload", layout=widgets.Layout(width="120px"))
+        self.src_mode = widgets.Dropdown(options=["URL/Chemin", "Upload", "Presse-papier"], value="URL/Chemin", layout=widgets.Layout(width="120px"))
+        self.path_in = widgets.Text(placeholder="http://...", layout=widgets.Layout(flex="1", min_width="200px"))
+        self.upload = widgets.FileUpload(accept="", multiple=False, layout=widgets.Layout(width="250px", display="none"))
+        self.paste_in = widgets.Textarea(placeholder="Collez ici...", layout=widgets.Layout(flex="1", height="40px", min_width="200px", display="none"))
         
         self.btn_preview = widgets.Button(description="Preview", button_style="info", layout=widgets.Layout(width="100px"))
         self.btn_preview.on_click(self._on_preview)
@@ -33,6 +35,7 @@ class DataSourceBlock:
         self.out_preview = widgets.Output()
         
         self.type_dd.observe(self._update_adv_opts, names='value')
+        self.src_mode.observe(self._on_src_mode_changed, names='value')
         self._update_adv_opts()
         
         self.ui = widgets.VBox([
@@ -40,14 +43,30 @@ class DataSourceBlock:
                 self.btn_remove,
                 self.name_in,
                 self.type_dd,
+                self.src_mode,
                 self.path_in,
-                widgets.HTML("<b style='line-height:30px; margin:0 5px;'>OU</b>"),
                 self.upload,
+                self.paste_in,
                 self.btn_preview
             ], layout=widgets.Layout(align_items="center", flex_wrap="wrap", grid_gap="5px")),
             self.dynamic_opts,
             self.out_preview
         ], layout=widgets.Layout(border="1px solid #e5e7eb", padding="10px", margin="10px 0", border_radius="8px", background_color="#fcfcfc"))
+
+    def _on_src_mode_changed(self, change):
+        val = change.new
+        if val == "Upload":
+            self.path_in.layout.display = "none"
+            self.paste_in.layout.display = "none"
+            self.upload.layout.display = "flex"
+        elif val == "Presse-papier":
+            self.path_in.layout.display = "none"
+            self.upload.layout.display = "none"
+            self.paste_in.layout.display = "flex"
+        else:
+            self.upload.layout.display = "none"
+            self.paste_in.layout.display = "none"
+            self.path_in.layout.display = "flex"
 
     def _update_adv_opts(self, change=None):
         ds_type = self.type_dd.value
@@ -81,10 +100,12 @@ class DataSourceBlock:
                 box = widgets.VBox([w, help_text], layout=widgets.Layout(min_width="220px", flex="1 1 auto", margin="5px 10px 10px 0"))
                 boxes.append(box)
                 
-        if not boxes:
-            boxes.append(widgets.HTML("<i style='color:gray; font-size: 0.9em;'>Aucune option avancée.</i>"))
-            
-        self.dynamic_opts.children = [widgets.HBox(boxes, layout=widgets.Layout(flex_wrap="wrap", padding="10px 0 0 5px", width="100%"))]
+        if boxes:
+            acc = widgets.Accordion(children=[widgets.HBox(boxes, layout=widgets.Layout(flex_wrap="wrap", padding="10px 0 0 5px", width="100%"))])
+            acc.set_title(0, "Options avancées")
+            self.dynamic_opts.children = [acc]
+        else:
+            self.dynamic_opts.children = [widgets.HTML("<i style='color:gray; font-size: 0.9em; margin-left:10px;'>Aucune option avancée.</i>")]
 
     def _get_data(self):
         ds_type = self.type_dd.value
@@ -92,21 +113,25 @@ class DataSourceBlock:
         src_type = None
         src_content = None
         
-        if self.upload.value:
+        mode = self.src_mode.value
+        if mode == "Upload" and self.upload.value:
             src_type = "upload"
             try:
                 uploaded_file = self.upload.value[0] if isinstance(self.upload.value, tuple) else list(self.upload.value.values())[0]
-                src_content = uploaded_file['content']
+                src_content = bytes(uploaded_file['content'])
             except Exception:
                 keys = list(self.upload.value.keys())
-                src_content = self.upload.value[keys[0]]['content']
-        elif self.path_in.value:
+                src_content = bytes(self.upload.value[keys[0]]['content'])
+        elif mode == "Presse-papier" and self.paste_in.value:
+            src_type = "upload"
+            src_content = self.paste_in.value.encode('utf-8')
+        elif mode == "URL/Chemin" and self.path_in.value:
             val = self.path_in.value
             src_content = val
             if val.startswith("http"): src_type = "url"
             else: src_type = "local"
         else:
-            return None, "Aucune source spécifiée (path/upload)."
+            return None, "Aucune source spécifiée pour ce mode."
             
         try:
             data = load_data(ds_type, src_type, src_content, adv_options)
@@ -193,6 +218,9 @@ class DataLoaderUI:
         self.btn_load_all = widgets.Button(description="Load All into State", button_style=styles.BTN_PRIMARY, layout=widgets.Layout(width="250px", height="40px"))
         self.btn_load_all.on_click(self._on_load_all)
         
+        self.btn_clear_cache = widgets.Button(description="Vider le cache disk & RAM", button_style="warning", layout=widgets.Layout(width="250px", height="40px"))
+        self.btn_clear_cache.on_click(self._on_clear_cache)
+        
         header = widgets.HTML(styles.card_html("DataLoader", "Chargement des données & Multimodal", "Configurez vos sources de données et prévisualisez-les indépendamment."))
         guide_acc = self._build_guide()
         
@@ -204,9 +232,25 @@ class DataLoaderUI:
             widgets.HTML("<hr style='border:1px solid #e5e7eb; margin: 15px 0;'>"),
             self.blocks_container,
             widgets.HTML("<hr style='border:1px solid #e5e7eb; margin: 15px 0;'>"),
-            widgets.HBox([self.btn_load_all], layout=widgets.Layout(justify_content="center")),
+            widgets.HBox([self.btn_load_all, self.btn_clear_cache], layout=widgets.Layout(justify_content="center", gap="20px")),
             self.out_global
         ], layout=styles.LAYOUT_SECTION)
+
+    def _on_clear_cache(self, b):
+        import shutil, os
+        with self.out_global:
+            clear_output(wait=True)
+            path = "data/raw"
+            if os.path.exists(path):
+                shutil.rmtree(path)
+                print(f"🗑️ Dossier '{path}' supprimé avec succès !")
+            else:
+                print("Le cache disque est déjà vide.")
+            if hasattr(self.state, "data_raw"):
+                self.state.data_raw.clear()
+            if hasattr(self.state, "data_types"):
+                self.state.data_types.clear()
+            print("🧹 Cache RAM (datasets en mémoire) vidé.")
 
     def _get_types_options(self):
         types = self.config.get("supported_types", {"CSV": "csv"})
@@ -244,7 +288,9 @@ class DataLoaderUI:
                 boxes.append(box)
                 
         if boxes:
-            self.mode_opts_container.children = [widgets.HTML("<b>Mode Config:</b>"), widgets.HBox(boxes, layout=widgets.Layout(flex_wrap="wrap", margin="5px 0", width="100%"))]
+            acc = widgets.Accordion(children=[widgets.HBox(boxes, layout=widgets.Layout(flex_wrap="wrap", margin="5px 0", width="100%"))])
+            acc.set_title(0, "Mode Config")
+            self.mode_opts_container.children = [acc]
             self.mode_opts_container.layout.display = "block"
         else:
             self.mode_opts_container.children = []
@@ -306,7 +352,10 @@ class DataLoaderUI:
                 ds_type = b.type_dd.value
                 
                 # Check if configured
-                if not b.upload.value and not b.path_in.value:
+                mode = b.src_mode.value
+                if (mode == "Upload" and not b.upload.value) or \
+                   (mode == "Presse-papier" and not b.paste_in.value) or \
+                   (mode == "URL/Chemin" and not b.path_in.value):
                     if len(self.blocks) == 1:
                         print(f"⚠️ Source '{name}' vide, ignorée.")
                     continue
@@ -320,6 +369,28 @@ class DataLoaderUI:
                     self.state.data_raw[name] = data
                     self.state.data_types[name] = ds_type
                     loaded_names.append(name)
+                    
+                    # --- Sauvegarde sur le disque ---
+                    try:
+                        import os
+                        os.makedirs("data/raw", exist_ok=True)
+                        safe_name = name.replace(" ", "_")
+                        safe_path = f"data/raw/{safe_name}"
+                        if isinstance(data, pd.DataFrame):
+                            data.to_csv(f"{safe_path}.csv", index=False)
+                        elif type(data).__name__ == "Image" and hasattr(data, 'save'):
+                            data.save(f"{safe_path}.png")
+                        elif isinstance(data, str):
+                            with open(f"{safe_path}.txt", "w", encoding="utf-8") as f:
+                                f.write(data)
+                        elif isinstance(data, dict):
+                            import json
+                            with open(f"{safe_path}.json", "w", encoding="utf-8") as f:
+                                json.dump(data, f)
+                        # Pour Neo4j, Graphs et Textes complexes, une sauvegarde locale n'est pas forcement pertinente
+                    except Exception as ex:
+                        print(f"⚠️ Impossible de persister '{name}' sur disque : {ex}")
+                        
                     print(f"✅ Succès: '{name}' chargé (Format: {ds_type})")
                     loaded_count += 1
             
