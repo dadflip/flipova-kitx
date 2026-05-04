@@ -36,6 +36,7 @@ class DataSourceBlock:
         
         self.type_dd.observe(self._update_adv_opts, names='value')
         self.src_mode.observe(self._on_src_mode_changed, names='value')
+        self.upload.observe(self._on_upload_changed, names='value')
         self._update_adv_opts()
         
         self.ui = widgets.VBox([
@@ -52,6 +53,35 @@ class DataSourceBlock:
             self.dynamic_opts,
             self.out_preview
         ], layout=widgets.Layout(border="1px solid #e5e7eb", padding="10px", margin="10px 0", border_radius="8px", background_color="#fcfcfc"))
+
+    def _on_upload_changed(self, change):
+        if not self.upload.value: return
+        with self.out_preview:
+            clear_output(wait=True)
+            print("⏳ Sauvegarde du fichier en cours...")
+            try:
+                uploaded_file = self.upload.value[0] if isinstance(self.upload.value, tuple) else list(self.upload.value.values())[0]
+                content_bytes = bytes(uploaded_file['content'])
+                filename = uploaded_file['name']
+            except Exception:
+                keys = list(self.upload.value.keys())
+                uploaded_file = self.upload.value[keys[0]]
+                content_bytes = bytes(uploaded_file['content'])
+                filename = uploaded_file.get('metadata', {}).get('name', 'uploaded_file')
+                
+            import os
+            os.makedirs("data/raw", exist_ok=True)
+            safe_name = filename.replace(" ", "_").replace("/", "_")
+            file_path = f"data/raw/{safe_name}"
+            with open(file_path, "wb") as f:
+                f.write(content_bytes)
+                
+            self.path_in.value = file_path
+            self.src_mode.value = "URL/Chemin"
+            # Clear upload value to allow re-upload if needed
+            self.upload.value = () if isinstance(self.upload.value, tuple) else {}
+            clear_output()
+            print(f"✅ Fichier '{safe_name}' uploadé et sauvegardé dans '{file_path}'.\nChemin défini pour chargement/preview.")
 
     def _on_src_mode_changed(self, change):
         val = change.new

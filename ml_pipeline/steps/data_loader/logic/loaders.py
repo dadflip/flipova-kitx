@@ -102,18 +102,15 @@ def load_data(ds_type, source_type, path_or_content, adv_options):
                 return {"Error": str(e)}
                 
         elif ds_type == "ontology":
-            try:
-                from owlready2 import get_ontology
-                # Owlready supports URL or local file directly
-                return get_ontology(path_or_content).load()
-            except ImportError:
-                import rdflib
-                g = rdflib.Graph()
-                if source_type == "upload":
-                    g.parse(data=path_or_content.decode("utf-8"), format="xml")
-                else:
-                    g.parse(path_or_content)
-                return g
+            import rdflib
+            g = rdflib.Graph()
+            
+            # Pour l'upload, on a soit path (si local/url), soit les octets direct
+            if source_type == "upload" and isinstance(path_or_content, bytes):
+                g.parse(data=path_or_content.decode("utf-8", errors="replace"), format="xml")
+            else:
+                g.parse(path_or_content)
+            return g
                 
         elif ds_type == "graph":
             import networkx as nx

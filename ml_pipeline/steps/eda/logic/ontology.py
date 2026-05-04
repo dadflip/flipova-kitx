@@ -14,12 +14,19 @@ def _ns(uri):
     return parts[0] + "/" if len(parts) > 1 else s
 
 def get_ontology_stats(g) -> dict:
+    if not hasattr(g, "subjects"):
+        return {}
+        
     try:
         from rdflib.namespace import OWL, RDF, RDFS
     except ImportError:
         return {}
 
-    classes = list(g.subjects(RDF.type, OWL.Class))
+    try:
+        classes = list(g.subjects(RDF.type, OWL.Class))
+    except TypeError:
+        return {}
+        
     props_obj = list(g.subjects(RDF.type, OWL.ObjectProperty))
     props_dt = list(g.subjects(RDF.type, OWL.DatatypeProperty))
     props_ann = list(g.subjects(RDF.type, OWL.AnnotationProperty))
@@ -41,6 +48,7 @@ def get_ontology_stats(g) -> dict:
     }
 
 def get_ontology_graph_fig(g, max_edges: int, lay: str, allowed_relations: list) -> plt.Figure | None:
+    if not hasattr(g, "__iter__"): return None
     try:
         import networkx as nx
         from rdflib.namespace import RDF, RDFS
@@ -113,6 +121,7 @@ def get_ontology_graph_fig(g, max_edges: int, lay: str, allowed_relations: list)
     return fig
 
 def get_ontology_hierarchy_fig(g, max_hier: int) -> plt.Figure | None:
+    if not hasattr(g, "triples"): return None
     try:
         from rdflib.namespace import RDFS
         import networkx as nx
@@ -178,6 +187,7 @@ def get_namespaces_fig(top_ns: list) -> plt.Figure | None:
     return fig
 
 def get_ontology_domain_range(g) -> list:
+    if not hasattr(g, "triples"): return []
     try:
         from rdflib.namespace import RDFS
     except ImportError:
