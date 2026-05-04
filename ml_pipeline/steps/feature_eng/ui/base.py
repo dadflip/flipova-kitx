@@ -39,8 +39,8 @@ def _inject_tab_css() -> None:
         font-weight:700 !important; }
     </style>"""))
 
-class FeatureEngUI:
-    """Interface Feature Engineering — 10 onglets : Preview, Math, Conditions, Formula, Text, Date, Binning, Viz, Dashboard, Manage."""
+class TabularFeatureEngUI:
+    """Interface Feature Engineering Numérique/Tabulaire."""
 
     def __init__(self, state):
         self.state = state
@@ -706,3 +706,69 @@ class FeatureEngUI:
                 self._notify(self.manage_out, f"Set type of '{col}' → '{new_type}'")
         except Exception as e:
             self._notify(self.manage_out, str(e), True)
+
+class FeatureEngUI:
+    """Interface de routage pour Feature Engineering selon le type de dataset."""
+    def __init__(self, state):
+        self.state = state
+        self.all_datasets = {}
+        for k, v in self.state.data_raw.items():
+            self.all_datasets[k] = v
+        for k, v in getattr(self.state, "data_cleaned", {}).items():
+            self.all_datasets[f"[CLN] {k}"] = v
+            
+        self._build_ui()
+
+    def _build_ui(self):
+        if not self.all_datasets:
+            self.ui = styles.error_msg("Aucun dataset disponible pour Feature Engineering.")
+            return
+
+        self.ds_selector = widgets.Dropdown(
+            options=list(self.all_datasets.keys()),
+            description="Dataset:", layout=widgets.Layout(width="360px"))
+        self.ds_selector.observe(self.on_ds_change, names="value")
+        self.current_ds = self.ds_selector.value
+        
+        header = widgets.HTML(styles.card_html("Feature Engineering", "Advanced Variable Laboratory", ""))
+        top_bar = widgets.HBox(
+            [header, widgets.HTML("<div style='flex:1'></div>"), self.ds_selector],
+            layout=widgets.Layout(align_items="center", justify_content="space-between",
+                                   margin="0 0 12px 0", padding="0 0 10px 0",
+                                   border_bottom="2px solid #ede9fe"))
+        
+        self.dynamic_ui = widgets.VBox([])
+        self.ui = widgets.VBox(
+            [top_bar, self.dynamic_ui],
+            layout=widgets.Layout(width="100%", max_width="1000px", border="1px solid #e5e7eb",
+                                   padding="18px", border_radius="10px", background_color="#ffffff"))
+        self.on_ds_change(None)
+
+    def on_ds_change(self, change):
+        if change:
+            self.current_ds = change["new"]
+        if not self.current_ds:
+            return
+            
+        data = self.all_datasets[self.current_ds]
+        orig_key = self.current_ds.split(" ", 1)[1] if " " in self.current_ds else self.current_ds
+        ds_type = self.state.data_types.get(orig_key, "tabular")
+        
+        if ds_type in ("tabular", "csv", "sklearn", "excel", "timeseries"):
+            # Use TabularFeatureEngUI
+            tabular_ui = TabularFeatureEngUI(self.state)
+            # Remove top bars of tabular inside to avoid double top bar
+            tabular_ui.ui.children = tabular_ui.ui.children[1:]
+            self.dynamic_ui.children = [tabular_ui.ui]
+        elif ds_type == "image":
+            from .image import build_image_ui
+            build_image_ui(self, data)
+        elif ds_type == "text":
+            from .text import build_text_ui
+            build_text_ui(self, data)
+        elif ds_type == "graph":
+            from .graph import build_graph_ui
+            build_graph_ui(self, data)
+        else:
+            self.dynamic_ui.children = [widgets.HTML(f"<div style='padding:20px;'><b style='color:#ef4444;'>Warning:</b> Feature Engineering for '{ds_type}' is not yet implemented natively in this tab. The tabular engineer applies to dataframes only.</div>")]
+

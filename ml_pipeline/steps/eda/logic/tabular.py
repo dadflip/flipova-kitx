@@ -70,13 +70,14 @@ class EDAVisualizerUtils:
                         plot_df = df[[col, hue]].dropna().copy()
                         plot_df[hue] = plot_df[hue].astype(str)
                         if plot_type == "box":
-                            sns.boxplot(data=plot_df, x=hue, y=col, palette=palette, ax=ax)
+                            sns.boxplot(data=plot_df, x=hue, y=col, hue=hue, legend=False, palette=palette, ax=ax)
                         else:
-                            sns.violinplot(data=plot_df, x=hue, y=col, palette=palette, ax=ax)
+                            sns.violinplot(data=plot_df, x=hue, y=col, hue=hue, legend=False, palette=palette, ax=ax)
                         if log_scale:
                             ax.set_yscale("log")
                         break
-                ax.legend(title=hue, fontsize=9)
+                if plot_type not in ("box", "violin"):
+                    ax.legend(title=hue, fontsize=9)
             else:
                 if plot_type == "hist":
                     sns.histplot(data, kde=kde, bins=bins, color=color, log_scale=log_scale, ax=ax)
@@ -163,10 +164,12 @@ class EDAVisualizerUtils:
             plot_df[c_col] = plot_df[c_col].astype(str)
             if hue and hue in plot_df.columns:
                 plot_df[hue] = plot_df[hue].astype(str)
+            hue_kw = hue if hue else c_col
+            leg_kw = True if hue else False
             if plot_type == "box":
-                sns.boxplot(data=plot_df, x=x_col, y=y_col, hue=hue, palette=palette, ax=ax)
+                sns.boxplot(data=plot_df, x=x_col, y=y_col, hue=hue_kw, legend=leg_kw, palette=palette, ax=ax)
             elif plot_type == "violin":
-                sns.violinplot(data=plot_df, x=x_col, y=y_col, hue=hue, palette=palette, ax=ax)
+                sns.violinplot(data=plot_df, x=x_col, y=y_col, hue=hue_kw, legend=leg_kw, palette=palette, ax=ax)
             elif plot_type == "strip":
                 sns.stripplot(data=plot_df, x=x_col, y=y_col, hue=hue,
                               alpha=alpha, palette=palette, dodge=bool(hue), ax=ax)

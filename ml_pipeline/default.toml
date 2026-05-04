@@ -1218,7 +1218,7 @@ code = "df.drop(columns=[col], inplace=True)"
 [[encoding.tabular.categorical]]
 label = "One-Hot (pandas)"
 value = "onehot_pandas"
-code = "df = pd.get_dummies(df, columns=[col], prefix=col, drop_first=false)"
+code = "df = pd.get_dummies(df, columns=[col], prefix=col, dtype=int, drop_first=False)"
 
 [[encoding.tabular.categorical]]
 label = "One-Hot (sklearn)"
@@ -1546,7 +1546,7 @@ value = "umap"
 params = { n_components = 2, n_neighbors = 15, random_state = 42 }
 
 # ---------------------------------------------------------------------------
-# ÉTAPE 8 — SPLIT (inclut balancing)
+# ÉTAPE 8 — DATASET BALANCING
 # ---------------------------------------------------------------------------
 [split.defaults]
 test_size = 0.2

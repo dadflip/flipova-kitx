@@ -57,11 +57,102 @@ def apply_encoding(df: pd.DataFrame, enc_params: dict, config: dict) -> pd.DataF
         if enc_value == "drop":
             df_new.drop(columns=[col], inplace=True)
         elif opt_info and "code" in opt_info and opt_info["code"]:
-            loc_env = {"df": df_new, "col": col, "params": opt_info.get("params", {})}
+            loc_env = {"pd": pd, "np": np, "df": df_new, "col": col, "params": opt_info.get("params", {})}
             try:
                 exec(opt_info["code"], globals(), loc_env)
                 df_new = loc_env["df"]
             except Exception as e:
                 print(f"[Error] Encoding {enc_value} on {col}: {e}")
+        elif opt_info and "module" in opt_info and "class_name" in opt_info:
+            try:
+                import importlib
+                mod = importlib.import_module(opt_info["module"])
+                EncoderClass = getattr(mod, opt_info["class_name"])
+                
+                raw_params = opt_info.get("params", {})
+                clean_params = {}
+                for pk, pv in raw_params.items():
+                    if pv == "null": clean_params[pk] = None
+                    elif pv == "false": clean_params[pk] = False
+                    elif pv == "true": clean_params[pk] = True
+                    else: clean_params[pk] = pv
+                        
+                encoder = EncoderClass(**clean_params)
+                
+                # Using [[col]] since sklearn expects 2D
+                # Note: label encoder from sklearn expects 1D, so we try/except
+                if opt_info["class_name"] == "LabelEncoder":
+                    df_new[col] = encoder.fit_transform(df_new[col])
+                else:
+                    transformed = encoder.fit_transform(df_new[[col]])
+                    if hasattr(transformed, "toarray"):
+                        transformed = transformed.toarray()
+                    
+                    if isinstance(transformed, pd.DataFrame):
+                        # category_encoders typically return DataFrames
+                        # We need to prepend the col name to transformed columns if they don't have it
+                        # Wait, category encoders prefixes the column themselves usually.
+                        transformed.index = df_new.index
+                        df_new = pd.concat([df_new.drop(columns=[col]), transformed], axis=1)
+                    elif len(transformed.shape) > 1 and transformed.shape[1] > 1:
+                        feat_names = [f"{col}_{i}" for i in range(transformed.shape[1])]
+                        if hasattr(encoder, "get_feature_names_out"):
+                            try:
+                                feat_names = encoder.get_feature_names_out([col])
+                            except: pass
+                        df_trans = pd.DataFrame(transformed, columns=feat_names, index=df_new.index)
+                        df_new = pd.concat([df_new.drop(columns=[col]), df_trans], axis=1)
+                    else:
+                        if len(transformed.shape) > 1:
+                            df_new[col] = transformed[:, 0]
+                        else:
+                            df_new[col] = transformed
+            except Exception as e:
+                print(f"[Error] Encoding {enc_value} on {col} with module {opt_info['module']}: {e}")
                 
     return df_new
+
+def build_sklearn_pipeline_code(enc_params: dict, config: dict) -> str:
+    imports = set()
+    transformers = []
+    
+    for col, param in enc_params.items():
+        enc_value = param["enc_value"]
+        kind = param["kind"]
+        if enc_value in ("none", "drop"):
+            continue
+            
+        options_config = config.get("tabular", {}).get(kind, [])
+        opt_info = next((o for o in options_config if o["value"] == enc_value), None)
+        
+        if opt_info and "module" in opt_info and "class_name" in opt_info:
+            imports.add(f"from {opt_info['module']} import {opt_info['class_name']}")
+            
+            raw_params = opt_info.get("params", {})
+            param_strs = []
+            for pk, pv in raw_params.items():
+                if pv == "null": param_strs.append(f"{pk}=None")
+                elif pv == "false": param_strs.append(f"{pk}=False")
+                elif pv == "true": param_strs.append(f"{pk}=True")
+                elif isinstance(pv, str): param_strs.append(f"{pk}='{pv}'")
+                else: param_strs.append(f"{pk}={pv}")
+                    
+            p_str = ", ".join(param_strs)
+            transformers.append(f"    ('{enc_value}_{col}', {opt_info['class_name']}({p_str}), ['{col}'])")
+            
+    if not transformers:
+        return ""
+        
+    imports.add("from sklearn.compose import ColumnTransformer")
+    
+    code = "\n".join(sorted(imports)) + "\n\n"
+    code += "preprocessor = ColumnTransformer(\n"
+    code += "    transformers=[\n"
+    code += ",\n".join(transformers) + "\n"
+    code += "    ],\n"
+    code += "    remainder='passthrough'\n"
+    code += ")\n"
+    
+    return code
+
+

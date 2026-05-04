@@ -7,7 +7,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from ml_pipeline.styles import styles
 
-from ..logic.operations import calc_outliers, apply_outliers, apply_encoding
+from ..logic.operations import calc_outliers, apply_outliers, apply_encoding, build_sklearn_pipeline_code
 
 class UltimateEncoder:
     """Interface d'encodage des variables + gestion des outliers."""
@@ -244,15 +244,52 @@ class UltimateEncoder:
             out_dd   = widgets.Dropdown(options=self.outlier_options, value="none", layout=widgets.Layout(width="180px", margin="0 20px 0 0"))
             lbl_ratio = widgets.HTML("<div style='width:150px;color:#64748b;padding-top:4px;'>-</div>")
             flag_cb  = widgets.Checkbox(value=False, description="Significatif", indent=False, layout=styles.LAYOUT_BTN_STD, disabled=True)
-            def _update_ratio(change, df_col=df[col], lbl=lbl_ratio, cb=flag_cb):
+            def _update_ratio(change, df_col=df[col].copy(), col_name=col, lbl=lbl_ratio, cb=flag_cb):
                 if change["new"] == "none":
                     lbl.value = "<div style='width:150px;color:#64748b;padding-top:4px;'>-</div>"
-                    cb.disabled = True; cb.value = False; return
+                    cb.disabled = True; cb.value = False
+                    with self.outlier_plot_out:
+                        from IPython.display import clear_output
+                        clear_output()
+                    return
                 cb.disabled = False
-                n_out, t_out = calc_outliers(df_col, change["new"])
+                o_act = change["new"]
+                n_out, t_out = calc_outliers(df_col, o_act)
                 pct = (n_out/t_out)*100 if t_out > 0 else 0
                 color = "#ef4444" if pct > 5 else "#f59e0b" if pct > 1 else "#10b981"
                 lbl.value = f"<div style='width:150px;color:{color};padding-top:4px;'>{n_out}/{t_out} ({pct:.1f}%)</div>"
+                
+                with self.outlier_plot_out:
+                    from IPython.display import clear_output
+                    import matplotlib.pyplot as plt
+                    import seaborn as sns
+                    clear_output(wait=True)
+                    df_after = df_col.copy()
+                    if o_act == "clip_iqr":
+                        q1, q3 = df_after.quantile(0.25), df_after.quantile(0.75)
+                        iqr = q3 - q1
+                        df_after = df_after.clip(lower=q1-1.5*iqr, upper=q3+1.5*iqr)
+                    elif o_act == "drop_zscore":
+                        std = df_after.std()
+                        if std > 0:
+                            df_after = df_after[(((df_after - df_after.mean()) / std).abs() <= 3)]
+                    
+                    fig, axs = plt.subplots(1, 2, figsize=(10, 3))
+                    fig.patch.set_facecolor('#ffffff')
+                    sns.histplot(df_after, color="#10b981", ax=axs[0], kde=True, label="After", alpha=0.9)
+                    sns.histplot(df_col, color="#ef4444", ax=axs[0], kde=False, label="Removed/Clipped", alpha=0.3)
+                    axs[0].set_title(f"Distribution: {col_name}")
+                    axs[0].legend()
+                    
+                    df_plot = pd.DataFrame({
+                        "Value": list(df_col.dropna()) + list(df_after.dropna()),
+                        "State": ["Avant"]*len(df_col.dropna()) + ["Après"]*len(df_after.dropna())
+                    })
+                    sns.boxplot(data=df_plot, x="State", y="Value", hue="State", palette={"Avant":"#ef4444", "Après":"#10b981"}, ax=axs[1], legend=False)
+                    axs[1].set_title(f"Boxplot: {col_name}")
+                    
+                    plt.tight_layout()
+                    plt.show()
             out_dd.observe(_update_ratio, names="value")
             self._tab_outlier_widgets[col] = {"outlier_dd": out_dd, "flag_cb": flag_cb}
             rows.append(widgets.HBox([lbl_col, out_dd, lbl_ratio, flag_cb],
@@ -301,6 +338,12 @@ class UltimateEncoder:
             display(styles.info_msg(
                 f"Encodage appliqué sur '{self.current_ds}'.<br>"
                 f"Original : {self.datasets[self.current_ds].shape} → Final : {df.shape}"))
+                
+            code = build_sklearn_pipeline_code(enc_params, self.config)
+            if code:
+                display(widgets.HTML("<div style='margin-top:16px;font-weight:bold;color:#334155;'>Sklearn Pipeline Code:</div>"))
+                display(widgets.HTML(f"<pre style='background:#f8fafc;padding:12px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;max-width:800px;overflow-x:auto;'>{code}</pre>"))
+
 
     def _detect_non_tabular_type(self, data) -> str:
         """Détecte le type de données non-tabulaires."""

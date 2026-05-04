@@ -47,79 +47,90 @@ class PipelineStyles:
     # ── CSS global ────────────────────────────────────────────────────────────
     CSS_GLOBALS = """
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
         .pipeline-card { 
-            border:1px solid #e2e8f0; 
-            border-radius:12px; 
-            background:#ffffff;
-            padding:20px; 
-            margin-bottom:16px; 
-            box-shadow:0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); 
+            border: 1px solid #f1f5f9; 
+            border-radius: 16px; 
+            background: #ffffff;
+            padding: 24px; 
+            margin-bottom: 24px; 
+            box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05); 
             font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #334155;
         }
         .pipeline-title { 
-            font-size:1.25em; 
-            font-weight:700; 
-            color:#0f172a;
-            margin-bottom:12px; 
-            display:flex; 
-            align-items:center; 
-            gap:10px; 
+            font-size: 1.5em; 
+            font-weight: 700; 
+            color: #0f172a;
+            margin-bottom: 16px; 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            letter-spacing: -0.02em;
         }
         .pipeline-badge { 
-            background:#e0e7ff; 
-            color:#3730a3; 
-            padding:4px 10px;
-            border-radius:9999px; 
-            font-size:0.75em; 
-            font-weight:600; 
+            background: #f8fafc; 
+            color: #475569; 
+            padding: 4px 12px;
+            border-radius: 9999px; 
+            font-size: 0.65em; 
+            font-weight: 600; 
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.06em;
+            border: 1px solid #e2e8f0;
         }
-        .pipeline-kv-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:16px; margin-bottom:16px; }
-        .pipeline-kv-cell { background:#f8fafc; padding:12px 16px; border-radius:8px; border:1px solid #e2e8f0; transition: all 0.2s ease;}
-        .pipeline-kv-cell:hover { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border-color: #cbd5e1; }
-        .kv-key { font-size:0.75em; text-transform:uppercase; color:#64748b; font-weight:700; letter-spacing:0.5px; margin-bottom:4px; }
-        .kv-val { font-size:1.1em; font-weight:600; color:#0f172a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-        .pipeline-section-title { font-size:0.85em; font-weight:800; color:#475569; text-transform:uppercase; margin:20px 0 12px 0; border-bottom:2px solid #f1f5f9; padding-bottom:6px; letter-spacing: 0.05em; }
-        .pipeline-dtype-grid { display:flex; flex-wrap:wrap; gap:8px; }
-        .pipeline-dtype-pill { background:#f1f5f9; border:1px solid #cbd5e1; padding:4px 10px; border-radius:6px; font-size:0.85em; font-weight:500; color:#334155; }
+        .pipeline-kv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 20px; }
+        .pipeline-kv-cell { background: #ffffff; padding: 16px; border-radius: 12px; border: 1px solid #f1f5f9; transition: all 0.2s ease; box-shadow: 0 1px 3px rgba(15,23,42,0.02);}
+        .pipeline-kv-cell:hover { box-shadow: 0 4px 12px -2px rgba(15,23,42,0.05); border-color: #e2e8f0; transform: translateY(-1px); }
+        .kv-key { font-size: 0.7em; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.05em; margin-bottom: 6px; }
+        .kv-val { font-size: 1.15em; font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .pipeline-section-title { font-size: 0.8em; font-weight: 700; color: #64748b; text-transform: uppercase; margin: 24px 0 12px 0; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; letter-spacing: 0.06em; }
+        .pipeline-dtype-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+        .pipeline-dtype-pill { background: #f8fafc; border: 1px solid #e2e8f0; padding: 4px 12px; border-radius: 8px; font-size: 0.8em; font-weight: 500; color: #475569; }
         
-        .success-box { padding:14px; background:#f0fdf4; border-left:4px solid #22c55e; margin-bottom:12px; border-radius:6px; color:#15803d; font-weight:500; }
-        .warning-box { padding:14px; background:#fffbeb; border-left:4px solid #f59e0b; margin-bottom:12px; border-radius:6px; color:#b45309; font-weight:500; }
-        .error-box   { padding:14px; background:#fef2f2; border-left:4px solid #ef4444; margin-bottom:12px; border-radius:6px; color:#b91c1c; font-weight:500; }
-        .info-box    { padding:14px; background:#eff6ff; border-left:4px solid #3b82f6; margin-bottom:12px; border-radius:6px; color:#1d4ed8; font-weight:500; }
+        .success-box { padding: 16px; background: #f0fdf4; border: 1px solid #bbf7d0; margin-bottom: 16px; border-radius: 12px; color: #166534; font-weight: 500; font-size: 0.9em; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+        .warning-box { padding: 16px; background: #fffbeb; border: 1px solid #fde68a; margin-bottom: 16px; border-radius: 12px; color: #92400e; font-weight: 500; font-size: 0.9em; box-shadow: 0 1px 2px rgba(0,0,0,0.02);  }
+        .error-box   { padding: 16px; background: #fef2f2; border: 1px solid #fecaca; margin-bottom: 16px; border-radius: 12px; color: #991b1b; font-weight: 500; font-size: 0.9em; box-shadow: 0 1px 2px rgba(0,0,0,0.02);  }
+        .info-box    { padding: 16px; background: #f8fafc; border: 1px solid #e2e8f0; margin-bottom: 16px; border-radius: 12px; color: #334155; font-weight: 500; font-size: 0.9em; box-shadow: 0 1px 2px rgba(0,0,0,0.02);  }
         
         /* Modernize ipywidgets buttons */
         button.jupyter-button, .jupyter-widgets.jupyter-button {
             width: auto !important;
             max-width: none !important;
             min-width: 120px !important;
-            padding: 8px 16px !important;
-            border-radius: 8px !important;
+            padding: 10px 20px !important;
+            border-radius: 10px !important;
             font-weight: 600 !important;
-            transition: all 0.2s ease !important;
+            font-size: 0.9em !important;
+            letter-spacing: 0.02em !important;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
             border: 1px solid transparent !important;
+            font-family: inherit !important;
         }
         
         button.jupyter-button.mod-primary {
-            background-color: #2563eb !important;
-            color: white !important;
-            box-shadow: 0 1px 3px rgba(37, 99, 235, 0.2) !important;
+            background-color: #0f172a !important;
+            color: #ffffff !important;
+            box-shadow: 0 2px 4px rgba(15, 23, 42, 0.1) !important;
         }
         button.jupyter-button.mod-primary:hover {
-            background-color: #1d4ed8 !important;
-            box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3) !important;
+            background-color: #334155 !important;
+            box-shadow: 0 4px 8px rgba(15, 23, 42, 0.15) !important;
+            transform: translateY(-1px) !important;
         }
         
         /* Override specifically some other buttons styles to match */
         button.jupyter-button:not(.mod-primary) {
-            background-color: #f1f5f9 !important;
+            background-color: #ffffff !important;
             color: #334155 !important;
-            border-color: #cbd5e1 !important;
+            border-color: #e2e8f0 !important;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02) !important;
         }
         button.jupyter-button:not(.mod-primary):hover {
-            background-color: #e2e8f0 !important;
-            border-color: #94a3b8 !important;
+            background-color: #f8fafc !important;
+            border-color: #cbd5e1 !important;
+            transform: translateY(-1px) !important;
         }
     </style>
     """

@@ -81,19 +81,19 @@ class BusinessEditorUI:
         )
 
         self.project_name = widgets.Text(description="Titre projet :", placeholder="ex. Predictive Maintenance",
-                                          layout=styles.LAYOUT_W95, style={"description_width": "150px"})
-        self.problem_ta   = widgets.Textarea(description="Problème :", placeholder="Décrivez le problème métier...",
-                                              layout=widgets.Layout(width="95%", height="60px"),
-                                              style={"description_width": "150px"})
-        self.impact_ta    = widgets.Textarea(description="Impact attendu :", placeholder="ROI, usage en production...",
-                                              layout=widgets.Layout(width="95%", height="60px"),
-                                              style={"description_width": "150px"})
+                                          layout=styles.LAYOUT_W95, style={"description_width": "160px"})
+        self.problem_ta   = widgets.Textarea(description="Problème métier :", placeholder="Décrivez le problème métier en détail...",
+                                              layout=widgets.Layout(width="95%", height="80px"),
+                                              style={"description_width": "160px"})
+        self.impact_ta    = widgets.Textarea(description="Impact & ROI :", placeholder="ROI, usage en production, intégration prévue...",
+                                              layout=widgets.Layout(width="95%", height="80px"),
+                                              style={"description_width": "160px"})
         self.latency_req  = widgets.Dropdown(
-            description="Latence :",
+            description="Latence cible :",
             options=["Real-time (<10ms)", "Online (<100ms)", "Batch (seconds+)", "No rigid constraint"],
-            value="No rigid constraint", layout=styles.LAYOUT_W95, style={"description_width": "150px"})
+            value="No rigid constraint", layout=styles.LAYOUT_W95, style={"description_width": "160px"})
         self.interpretability_req = widgets.Checkbox(
-            description="Interprétabilité requise (modèles white-box uniquement)",
+            description=" Interprétabilité requise (modèles explicables uniquement : Linear, Trees, etc.)",
             value=False, layout=styles.LAYOUT_W95, style={"description_width": "initial"}, indent=False)
 
         # Handle config gracefully if domains is missing
@@ -107,7 +107,7 @@ class BusinessEditorUI:
         default_domain = self._guess_default_domain(domain_options)
         
         self.domain_dd = widgets.Dropdown(options=domain_options, value=default_domain, description="Domaine ML :",
-                                           layout=styles.LAYOUT_W95, style={"description_width": "150px"})
+                                           layout=styles.LAYOUT_W95, style={"description_width": "160px"})
         self.dynamic_settings = widgets.VBox([])
         self.dyn_widgets: dict = {}
 
@@ -170,25 +170,25 @@ class BusinessEditorUI:
         def _dd(key, desc, opts, val=None):
             w = widgets.Dropdown(options=opts, value=val or (opts[0] if opts else None),
                                   description=desc, layout=styles.LAYOUT_W95,
-                                  style={"description_width": "150px"})
+                                  style={"description_width": "160px"})
             self.dyn_widgets[key] = w
             return w
 
         def _combo(key, desc, placeholder=""):
             w = widgets.Combobox(options=cols, description=desc, placeholder=placeholder,
-                                  layout=styles.LAYOUT_W95, style={"description_width": "150px"})
+                                  layout=styles.LAYOUT_W95, style={"description_width": "160px"})
             self.dyn_widgets[key] = w
             return w
 
         def _text(key, desc, placeholder=""):
             w = widgets.Text(description=desc, placeholder=placeholder,
-                              layout=styles.LAYOUT_W95, style={"description_width": "150px"})
+                              layout=styles.LAYOUT_W95, style={"description_width": "160px"})
             self.dyn_widgets[key] = w
             return w
 
         def _int(key, desc, val=3):
             w = widgets.IntText(value=val, description=desc,
-                                 layout=styles.LAYOUT_W95, style={"description_width": "150px"})
+                                 layout=styles.LAYOUT_W95, style={"description_width": "160px"})
             self.dyn_widgets[key] = w
             return w
 
@@ -261,21 +261,43 @@ class BusinessEditorUI:
             self.state.log_step("Business Context", "Context Defined", self.state.business_context)
 
             domain_lbl = self.domain_label_map.get(self.domain_dd.value, self.domain_dd.value)
-            dyn_html   = "".join(
-                f"<p style='margin:2px 0;'><strong>{k}:</strong> {v}</p>"
-                for k, v in dyn_params.items()
-            )
-            display(HTML(
-                f"<div style='margin-top:20px;padding:16px;border:1px solid #10b981;"
-                f"border-radius:8px;background:#ecfdf5;font-family:sans-serif;'>"
-                f"<b style='color:#047857;font-size:1.1em;'>[OK] Contexte validé</b>"
-                f"<div style='margin-top:12px;color:#065f46;font-size:0.95em;'>"
-                f"<p><strong>Projet :</strong> {self.project_name.value or '<i>Non spécifié</i>'}</p>"
-                f"<p><strong>Domaine ML :</strong> {domain_lbl}</p>"
-                f"<p><strong>Problème :</strong> {self.problem_ta.value or '<i>Non spécifié</i>'}</p>"
-                f"<hr style='border:1px dashed #6ee7b7;margin:5px 0;'/>"
-                f"{dyn_html}</div></div>"
-            ))
+            
+            # Format custom dyn params elegantly
+            dyn_html = ""
+            for k, v in dyn_params.items():
+                if v:
+                    dyn_html += f"<div style='margin-bottom:8px;'><span style='color:#64748b;font-size:0.85em;text-transform:uppercase;letter-spacing:0.05em;'>{k}</span><br><span style='color:#1e293b;font-weight:500;'>{v}</span></div>"
+
+            display(HTML(f'''
+            <div style='margin-top:20px; border-left:4px solid #10b981; border-radius:0 8px 8px 0; background-color:#ffffff; box-shadow:0 2px 5px rgba(0,0,0,0.05); padding:20px; font-family:sans-serif;'>
+                <div style='display:flex; align-items:center; margin-bottom:20px; border-bottom:1px solid #f1f5f9; padding-bottom:15px;'>
+                    <div style='background-color:#10b981; color:#fff; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; margin-right:12px;'>✓</div>
+                    <h3 style='margin:0; color:#064e3b; font-size:1.2em;'>Contexte Métier Validé</h3>
+                </div>
+                
+                <div style='display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;'>
+                    <div style='background:#f8fafc; padding:15px; border-radius:8px;'>
+                        <h4 style='margin:0 0 10px 0; color:#334155; font-size:0.95em; border-bottom:1px solid #e2e8f0; padding-bottom:6px;'>Projet & Objectifs</h4>
+                        <div style='margin-bottom:10px;'><span style='color:#64748b;font-size:0.85em;'>TITRE</span><br><span style='color:#1e293b;font-weight:600;font-size:1.1em;'>{self.project_name.value or "Non spécifié"}</span></div>
+                        <div style='margin-bottom:10px;'><span style='color:#64748b;font-size:0.85em;'>PROBLÈME</span><br><span style='color:#334155;'>{self.problem_ta.value or "Non spécifié"}</span></div>
+                        <div><span style='color:#64748b;font-size:0.85em;'>IMPACT ATTENDU</span><br><span style='color:#334155;'>{self.impact_ta.value or "Non spécifié"}</span></div>
+                    </div>
+                    
+                    <div style='background:#f8fafc; padding:15px; border-radius:8px;'>
+                        <h4 style='margin:0 0 10px 0; color:#334155; font-size:0.95em; border-bottom:1px solid #e2e8f0; padding-bottom:6px;'>Spécifications ML</h4>
+                        <div style='margin-bottom:10px;'><span style='color:#64748b;font-size:0.85em;'>DOMAINE</span><br><span style='background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:12px;font-size:0.9em;font-weight:600;'>{domain_lbl}</span></div>
+                        <div style='margin-bottom:10px;'><span style='color:#64748b;font-size:0.85em;'>CONTRAINTES</span><br>
+                            <span style='display:inline-block;background:#f1f5f9;border:1px solid #e2e8f0;padding:2px 6px;border-radius:4px;font-size:0.85em;margin-right:6px;'>⏱️ {self.latency_req.value}</span>
+                            {"<span style='display:inline-block;background:#f1f5f9;border:1px solid #e2e8f0;padding:2px 6px;border-radius:4px;font-size:0.85em;color:#b45309;'>🔍 White-box</span>" if self.interpretability_req.value else ""}
+                        </div>
+                        <div style='margin-top:10px;'>
+                            <h5 style='margin:10px 0 6px 0; color:#64748b; font-size:0.85em;'>PARAMÈTRES TECHNIQUES</h5>
+                            {dyn_html or "<span style='color:#94a3b8;font-style:italic;'>Aucun paramètre</span>"}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            '''))
 
 def runner(state) -> BusinessEditorUI:
     editor = BusinessEditorUI(state)

@@ -1,4 +1,4 @@
-"""Étape 7 — Split & Balancing (SplitBalancingUI)."""
+"""Étape 7 — Dataset Balancing (SplitBalancingUI)."""
 
 from .balancing.ui.base import SplitBalancingUI
 from IPython.display import display

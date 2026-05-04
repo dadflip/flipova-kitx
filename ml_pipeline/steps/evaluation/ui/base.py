@@ -274,4 +274,4 @@ class EvaluationUI:
             if rows:
                 df_summary = pd.DataFrame(rows).set_index("Model")
                 display(df_summary.style.set_properties(**{"font-size": "0.85em"}))
-            self.state.log_step("Evaluation", "Metrics Computed", {"models": list(self._all_metrics.keys()), "task": self.task})
+            self.state.log_step("Evaluation", "Metrics Computed", {"models": list(self._all_metrics.keys()), "task": self.task, "metrics": self._all_metrics})

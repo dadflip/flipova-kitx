@@ -5,8 +5,8 @@ from IPython.display import display, HTML, clear_output
 from ml_pipeline.styles import styles
 from ..logic.operations import auto_suggest_missing, execute_cleaning_logic
 
-class AdvancedCleaner:
-    """Interface de nettoyage : valeurs manquantes, nulls, doublons."""
+class TabularCleaner:
+    """Interface de nettoyage : valeurs manquantes, nulls, doublons (TABULAR)."""
 
     def __init__(self, state):
         self.state = state
@@ -221,4 +221,68 @@ class AdvancedCleaner:
                 f"<b>{ops}</b> opération(s) appliquée(s) sur '{self.current_ds}'.<br>"
                 f"Original : {self.original_datasets[self.current_ds].shape} → "
                 f"Nettoyé : {df_new.shape}"))
+
+class AdvancedCleaner:
+    """Routage du nettoyage selon le type."""
+    def __init__(self, state):
+        self.state = state
+        self.all_datasets = {}
+        # Ensure data_cleaned mirrors data_raw initially for non-tabular
+        for k, v in self.state.data_raw.items():
+            self.all_datasets[k] = v
+            
+        self._build_ui()
+
+    def _build_ui(self):
+        if not self.all_datasets:
+            self.ui = styles.error_msg("Aucun dataset disponible pour le Nettoyage.")
+            return
+
+        self.ds_selector = widgets.Dropdown(
+            options=list(self.all_datasets.keys()),
+            description="Dataset:", layout=widgets.Layout(width="360px"))
+        self.ds_selector.observe(self.on_ds_change, names="value")
+        self.current_ds = self.ds_selector.value
+        
+        header = widgets.HTML(styles.card_html("Clean", "Nettoyage des Données", ""))
+        top_bar = widgets.HBox(
+            [header, widgets.HTML("<div style='flex:1'></div>"), self.ds_selector],
+            layout=widgets.Layout(align_items="center", justify_content="space-between",
+                                   margin="0 0 12px 0", padding="0 0 10px 0",
+                                   border_bottom="2px solid #ede9fe"))
+        
+        self.dynamic_ui = widgets.VBox([])
+        self.ui = widgets.VBox(
+            [top_bar, self.dynamic_ui],
+            layout=widgets.Layout(width="100%", max_width="1000px", border="1px solid #e5e7eb",
+                                   padding="18px", border_radius="10px", background_color="#ffffff"))
+        self.on_ds_change(None)
+
+    def on_ds_change(self, change):
+        if change:
+            self.current_ds = change["new"]
+        if not self.current_ds:
+            return
+            
+        data = self.all_datasets[self.current_ds]
+        orig_key = self.current_ds.split(" ", 1)[1] if " " in self.current_ds else self.current_ds
+        ds_type = self.state.data_types.get(orig_key, "tabular")
+        
+        if ds_type in ("tabular", "csv", "sklearn", "excel", "timeseries"):
+            tabular_ui = TabularCleaner(self.state)
+            if hasattr(tabular_ui, "ui") and tabular_ui.ui.children:
+                tabular_ui.ui.children = tabular_ui.ui.children[1:]
+                self.dynamic_ui.children = [tabular_ui.ui]
+            else:
+                 self.dynamic_ui.children = [widgets.HTML("Aucune donnée tabulaire à nettoyer.")]
+        elif ds_type == "text":
+            from .text import build_text_ui
+            build_text_ui(self, data)
+        elif ds_type == "image":
+            from .image import build_image_ui
+            build_image_ui(self, data)
+        else:
+            self.state.data_cleaned[self.current_ds] = data
+            self.dynamic_ui.children = [widgets.HTML(f"<div style='padding:20px;'><b style='color:#10b981;'>Info:</b> Le dataset '{self.current_ds}' ({ds_type}) n'a pas besoin de nettoyage particulier via l'UI et a été transféré tel quel dans state.data_cleaned.</div>")]
+
 
