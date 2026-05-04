@@ -27,6 +27,11 @@ Install the package directly from GitHub:
 pip install git+https://github.com/dadflip/flipova-kitx.git
 ```
 
+> **⚠️ If using Kaggle:** Kaggle disables internet access by default in new notebooks. If you get an `exit code: 128 (subprocess-exited-with-error)` while installing or cloning, you must enable internet: 
+> 1. Open the right sidebar in your Kaggle notebook.
+> 2. Expand the **Settings** section.
+> 3. Turn the **Internet** toggle to ON.
+
 ## Usage
 
 In any Jupyter Notebook (or Google Colab environment), run the following to initialize the ML Pipeline UI:
