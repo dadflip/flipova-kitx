@@ -4,6 +4,11 @@ import sys
 
 def check_package(pkg):
     try:
+        if pkg in ("tensorflow", "keras"):
+            import os
+            os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+            import logging
+            logging.getLogger('absl').setLevel(logging.ERROR)
         importlib.import_module(pkg)
         return True
     except ImportError:
