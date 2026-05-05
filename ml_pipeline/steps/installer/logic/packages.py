@@ -9,7 +9,12 @@ def check_package(pkg):
             os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
             import logging
             logging.getLogger('absl').setLevel(logging.ERROR)
-        importlib.import_module(pkg)
+            
+        import contextlib
+        import os
+        with open(os.devnull, "w") as f, contextlib.redirect_stderr(f):
+            importlib.import_module(pkg)
+            
         return True
     except ImportError:
         return False

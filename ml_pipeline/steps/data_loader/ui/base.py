@@ -15,10 +15,11 @@ class DataSourceBlock:
         
         self.name_in = widgets.Text(description="Nom:", value=name, layout=widgets.Layout(width="180px"), style={"description_width": "initial"})
         self.type_dd = widgets.Dropdown(options=type_options, description="Format:", layout=widgets.Layout(width="220px"), style={"description_width": "initial"})
-        self.src_mode = widgets.Dropdown(options=["URL/Chemin", "Upload", "Presse-papier", "Dossier Local"], value="URL/Chemin", layout=widgets.Layout(width="120px"))
+        self.src_mode = widgets.Dropdown(options=["URL/Chemin", "Upload", "Presse-papier", "Dossier Local", "Dataset Sklearn"], value="URL/Chemin", layout=widgets.Layout(width="120px"))
         self.path_in = widgets.Text(placeholder="http:// ou /chemin...", layout=widgets.Layout(flex="1", min_width="200px"))
         self.upload = widgets.FileUpload(accept="", multiple=False, layout=widgets.Layout(width="250px", display="none"))
         self.paste_in = widgets.Textarea(placeholder="Collez ici...", layout=widgets.Layout(flex="1", height="40px", min_width="200px", display="none"))
+        self.sklearn_dd = widgets.Dropdown(options=["iris", "wine", "breast_cancer", "diabetes", "digits", "california_housing", "covtype"], layout=widgets.Layout(flex="1", min_width="200px", display="none"))
         
         self.chk_recursive = widgets.Checkbox(value=False, description="Récursif", layout=widgets.Layout(width="100px", display="none"))
         self.btn_scan = widgets.Button(description="Scanner", button_style="info", layout=widgets.Layout(width="80px", display="none"))
@@ -54,6 +55,7 @@ class DataSourceBlock:
                 self.path_in,
                 self.upload,
                 self.paste_in,
+                self.sklearn_dd,
                 self.chk_recursive,
                 self.btn_scan,
                 self.btn_preview
@@ -99,6 +101,7 @@ class DataSourceBlock:
             self.path_in.layout.display = "none"
             self.paste_in.layout.display = "none"
             self.upload.layout.display = "flex"
+            self.sklearn_dd.layout.display = "none"
             self.chk_recursive.layout.display = "none"
             self.btn_scan.layout.display = "none"
             self.file_list_box.layout.display = "none"
@@ -106,6 +109,7 @@ class DataSourceBlock:
             self.path_in.layout.display = "none"
             self.upload.layout.display = "none"
             self.paste_in.layout.display = "flex"
+            self.sklearn_dd.layout.display = "none"
             self.chk_recursive.layout.display = "none"
             self.btn_scan.layout.display = "none"
             self.file_list_box.layout.display = "none"
@@ -113,14 +117,24 @@ class DataSourceBlock:
             self.upload.layout.display = "none"
             self.paste_in.layout.display = "none"
             self.path_in.layout.display = "flex"
+            self.sklearn_dd.layout.display = "none"
             self.path_in.placeholder = "Chemin du dossier..."
             self.chk_recursive.layout.display = "flex"
             self.btn_scan.layout.display = "flex"
             self.file_list_box.layout.display = "flex"
+        elif val == "Dataset Sklearn":
+            self.upload.layout.display = "none"
+            self.paste_in.layout.display = "none"
+            self.path_in.layout.display = "none"
+            self.sklearn_dd.layout.display = "flex"
+            self.chk_recursive.layout.display = "none"
+            self.btn_scan.layout.display = "none"
+            self.file_list_box.layout.display = "none"
         else:
             self.upload.layout.display = "none"
             self.paste_in.layout.display = "none"
             self.path_in.layout.display = "flex"
+            self.sklearn_dd.layout.display = "none"
             self.path_in.placeholder = "http:// ou /chemin..."
             self.chk_recursive.layout.display = "none"
             self.btn_scan.layout.display = "none"
@@ -128,6 +142,10 @@ class DataSourceBlock:
 
     def _update_adv_opts(self, change=None):
         ds_type = self.type_dd.value
+        
+        if ds_type == "sklearn" and self.src_mode.value != "Dataset Sklearn":
+            self.src_mode.value = "Dataset Sklearn"
+            
         opts = self.adv_configs_map.get(ds_type, [])
         self.opt_widgets = {}
         
@@ -219,13 +237,21 @@ class DataSourceBlock:
         src_type = None
         src_content = None
         
-        if ds_type == "sklearn":
-            dataset_name = adv_options.get("dataset_name")
+        mode = self.src_mode.value
+        if mode == "Dataset Sklearn":
+            dataset_name = self.sklearn_dd.value
             if not dataset_name:
                 return None, "Nom du dataset sklearn non sélectionné"
-            return load_data("sklearn", "local", dataset_name, adv_options), None
+            
+            df = load_data("sklearn", "local", dataset_name, adv_options)
+            import os
+            os.makedirs("data/raw", exist_ok=True)
+            file_path = f"data/raw/sklearn_{dataset_name}.csv"
+            if isinstance(df, pd.DataFrame):
+                df.to_csv(file_path, index=False)
+                print(f"📁 Dataset Sklearn '{dataset_name}' sauvegardé sur disque: {file_path}")
+            return df, None
         
-        mode = self.src_mode.value
         if mode == "Upload" and self.upload.value:
             src_type = "local"
             try:
