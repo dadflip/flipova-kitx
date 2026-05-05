@@ -219,6 +219,12 @@ class DataSourceBlock:
         src_type = None
         src_content = None
         
+        if ds_type == "sklearn":
+            dataset_name = adv_options.get("dataset_name")
+            if not dataset_name:
+                return None, "Nom du dataset sklearn non sélectionné"
+            return load_data("sklearn", "local", dataset_name, adv_options), None
+        
         mode = self.src_mode.value
         if mode == "Upload" and self.upload.value:
             src_type = "local"

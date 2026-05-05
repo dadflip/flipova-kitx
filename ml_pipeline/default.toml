@@ -838,6 +838,14 @@ options = ["infer", "0", "None"]
 help = "Ligne utilisée comme en-tête"
 
 [[loading.adv_configs.sklearn]]
+id = "dataset_name"
+type = "dropdown"
+description = "Dataset"
+value = "iris"
+options = ["iris", "wine", "breast_cancer", "diabetes", "digits", "california_housing", "covtype"]
+help = "Nom du dataset sklearn à charger"
+
+[[loading.adv_configs.sklearn]]
 id = "rename_cols"
 type = "text"
 description = "Renommer cols"
