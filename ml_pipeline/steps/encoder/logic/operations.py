@@ -43,8 +43,10 @@ def apply_outliers(df: pd.DataFrame, outlier_params: dict) -> pd.DataFrame:
                 df_new = df_new[(((df_new[col] - df_new[col].mean()) / std).abs() <= 3)]
     return df_new
 
-def apply_encoding(df: pd.DataFrame, enc_params: dict, config: dict) -> tuple[pd.DataFrame, dict]:
+def apply_encoding(df: pd.DataFrame, enc_params: dict, config: dict, existing_encoders: dict = None) -> tuple[pd.DataFrame, dict]:
     df_new = df.copy()
+    if existing_encoders is None:
+        existing_encoders = {}
     fitted_encoders = {}
     for col, param in enc_params.items():
         enc_value = param["enc_value"]
@@ -80,21 +82,30 @@ def apply_encoding(df: pd.DataFrame, enc_params: dict, config: dict) -> tuple[pd
                     elif pv == "true": clean_params[pk] = True
                     else: clean_params[pk] = pv
                         
-                encoder = EncoderClass(**clean_params)
+                encoder = existing_encoders.get(col, {}).get("encoder", None)
+                is_fitted = True
+                if encoder is None:
+                    encoder = EncoderClass(**clean_params)
+                    is_fitted = False
                 
                 # Using [[col]] since sklearn expects 2D
                 # Note: label encoder from sklearn expects 1D, so we try/except
                 if opt_info["class_name"] == "LabelEncoder":
-                    df_new[col] = encoder.fit_transform(df_new[col])
+                    if is_fitted and hasattr(encoder, "transform"):
+                        df_new[col] = encoder.transform(df_new[col])
+                    else:
+                        df_new[col] = encoder.fit_transform(df_new[col])
                 else:
-                    transformed = encoder.fit_transform(df_new[[col]])
+                    if is_fitted and hasattr(encoder, "transform"):
+                        transformed = encoder.transform(df_new[[col]])
+                    else:
+                        transformed = encoder.fit_transform(df_new[[col]])
+                    
                     if hasattr(transformed, "toarray"):
                         transformed = transformed.toarray()
                     
                     if isinstance(transformed, pd.DataFrame):
                         # category_encoders typically return DataFrames
-                        # We need to prepend the col name to transformed columns if they don't have it
-                        # Wait, category encoders prefixes the column themselves usually.
                         transformed.index = df_new.index
                         df_new = pd.concat([df_new.drop(columns=[col]), transformed], axis=1)
                     elif len(transformed.shape) > 1 and transformed.shape[1] > 1:
@@ -110,6 +121,7 @@ def apply_encoding(df: pd.DataFrame, enc_params: dict, config: dict) -> tuple[pd
                             df_new[col] = transformed[:, 0]
                         else:
                             df_new[col] = transformed
+                            
                 fitted_encoders[col] = {"action": "sklearn", "encoder": encoder}
             except Exception as e:
                 print(f"[Error] Encoding {enc_value} on {col} with module {opt_info['module']}: {e}")

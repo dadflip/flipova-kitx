@@ -28,7 +28,7 @@ class BusinessEditorUI:
             if isinstance(data, pd.DataFrame):
                 cols = len(data.columns)
                 rows = len(data)
-                col_names = ", ".join(list(data.columns)[:5]) + ("..." if cols > 5 else "")
+                col_names = ", ".join([str(c) for c in list(data.columns)[:5]]) + ("..." if cols > 5 else "")
                 return (f"<li><b>{name}</b>: Tabular ({rows:,} rows, {cols} cols) "
                         f"<br><span style='font-size:0.85em;color:#6b7280;'>Cols: {col_names}</span></li>")
             elif dtype == "ontology" or "rdflib" in type(data).__module__:

@@ -320,7 +320,15 @@ class UltimateEncoder:
             if timing == "Before Encoding":
                 df = apply_outliers(df, outlier_params)
                 
-            df, _ = apply_encoding(df, enc_params, self.config)
+            ds_name_lower = self.current_ds.lower()
+            existing_enc = None
+            if "test" in ds_name_lower or "val" in ds_name_lower:
+                existing_enc = self.state.meta.get("train_encoders", None)
+                
+            df, fitted_enc = apply_encoding(df, enc_params, self.config, existing_encoders=existing_enc)
+            
+            if "train" in ds_name_lower or "train_encoders" not in self.state.meta:
+                self.state.meta["train_encoders"] = fitted_enc
             
             if timing == "After Encoding":
                 df = apply_outliers(df, outlier_params)
@@ -340,7 +348,7 @@ class UltimateEncoder:
                                   "outliers_timing": timing,
                                   "params": enc_params,
                                   "outliers": outlier_params,
-                                  "fitted_encoders": _})
+                                  "fitted_encoders": fitted_enc})
             display(styles.info_msg(
                 f"Encodage appliqué sur '{self.current_ds}'.<br>"
                 f"Original : {self.datasets[self.current_ds].shape} → Final : {df.shape}"))

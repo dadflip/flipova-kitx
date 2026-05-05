@@ -11,7 +11,10 @@ def check_package(pkg):
 
 def install_packages(packages):
     try:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", *packages])
+        args = []
+        for p in packages:
+            args.extend(p.split())
+        subprocess.check_call([sys.executable, "-m", "pip", "install", *args])
         return True, "Success"
     except Exception as e:
         return False, str(e)

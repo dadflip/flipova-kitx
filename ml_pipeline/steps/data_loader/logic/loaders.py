@@ -11,7 +11,21 @@ def load_data(ds_type, source_type, path_or_content, adv_options):
     adv_options: dict of parsed advanced options
     """
     try:
-        if ds_type in ("csv", "timeseries"):
+        res = _load_data_internal(ds_type, source_type, path_or_content, adv_options)
+        
+        if isinstance(res, pd.DataFrame):
+            rename_cols = adv_options.get("rename_cols", "")
+            if rename_cols:
+                new_names = [n.strip() for n in rename_cols.split(",") if n.strip()]
+                rename_dict = {col: new_names[i] for i, col in enumerate(res.columns) if i < len(new_names)}
+                res = res.rename(columns=rename_dict)
+                
+        return res
+    except Exception as e:
+        raise Exception(f"Erreur de chargement ({ds_type}): {e}")
+
+def _load_data_internal(ds_type, source_type, path_or_content, adv_options):
+    if ds_type in ("csv", "timeseries"):
             sep = adv_options.get("sep", ",")
             if sep == "": sep = ","
             header = adv_options.get("header", "infer")
@@ -132,7 +146,32 @@ def load_data(ds_type, source_type, path_or_content, adv_options):
                 with open(path_or_content, "r", encoding="utf-8") as f:
                     return f.read()
                     
+        elif ds_type == "sklearn":
+            import sklearn.datasets
+            dataset_name = path_or_content
+            if dataset_name == "covtype":
+                bunch = sklearn.datasets.fetch_covtype(as_frame=True)
+            elif dataset_name == "iris":
+                bunch = sklearn.datasets.load_iris(as_frame=True)
+            elif dataset_name == "wine":
+                bunch = sklearn.datasets.load_wine(as_frame=True)
+            elif dataset_name == "breast_cancer":
+                bunch = sklearn.datasets.load_breast_cancer(as_frame=True)
+            elif dataset_name == "diabetes":
+                bunch = sklearn.datasets.load_diabetes(as_frame=True)
+            elif dataset_name == "digits":
+                bunch = sklearn.datasets.load_digits(as_frame=True)
+            elif dataset_name == "california_housing":
+                bunch = sklearn.datasets.fetch_california_housing(as_frame=True)
+            else:
+                raise ValueError(f"Unknown sklearn dataset: {dataset_name}")
+            
+            df = bunch.frame
+            if df is None:
+                # Fallback if as_frame=True didn't work (e.g. older sklearn)
+                df = pd.DataFrame(bunch.data, columns=bunch.feature_names)
+                df['target'] = bunch.target
+            return df
+            
         else:
             return f"Mock data for {ds_type}"
-    except Exception as e:
-        raise Exception(f"Erreur de chargement ({ds_type}): {e}")

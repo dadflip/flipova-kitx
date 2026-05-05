@@ -55,6 +55,14 @@ default = false
 required = false
 
 [[environment.packages.groups]]
+id = "rapids_cuml"
+label = "RAPIDS cuML (GPU)"
+packages = ["cuml-cu12 --extra-index-url=https://pypi.nvidia.com"]
+check = ["cuml"]
+default = false
+required = false
+
+[[environment.packages.groups]]
 id = "torch"
 label = "PyTorch"
 packages = ["torch", "torchvision"]
@@ -270,7 +278,7 @@ ts_freqs = ["(auto)", "D", "W", "MS", "QS", "AS", "H", "T"]
 image_modes = ["RGB", "RGBA", "L", "1"]
 graph_formats = ["auto", "graphml", "gml", "edgelist", "adjlist"]
 zip_formats = ["csv", "image", "text", "json"]
-sklearn_datasets = ["iris", "wine", "breast_cancer", "diabetes", "digits", "california_housing"]
+sklearn_datasets = ["iris", "wine", "breast_cancer", "diabetes", "digits", "california_housing", "covtype"]
 
 [loading.supported_types]
 "CSV (.csv)" = "csv"
@@ -471,6 +479,14 @@ max = 1.0
 step = 0.01
 help = "Fraction des lignes à charger (1.0 = tout)"
 
+[[loading.adv_configs.csv]]
+id = "rename_cols"
+type = "text"
+description = "Renommer cols"
+value = ""
+placeholder = "nouveau1, nouveau2..."
+help = "Noms séparés par virgule pour renommer les colonnes de l'import"
+
 # TSV — mêmes options que CSV mais séparateur par défaut = tab
 [[loading.adv_configs.tsv]]
 id = "sep"
@@ -537,6 +553,14 @@ max = 1.0
 step = 0.01
 help = "Fraction des lignes à charger"
 
+[[loading.adv_configs.tsv]]
+id = "rename_cols"
+type = "text"
+description = "Renommer cols"
+value = ""
+placeholder = "nouveau1, nouveau2..."
+help = "Noms séparés par virgule pour renommer les colonnes de l'import"
+
 # Excel
 [[loading.adv_configs.excel]]
 id = "sheet"
@@ -568,6 +592,14 @@ type = "checkbox"
 description = "Parser les dates auto"
 value = false
 help = "Tenter de convertir les colonnes object en datetime"
+
+[[loading.adv_configs.excel]]
+id = "rename_cols"
+type = "text"
+description = "Renommer cols"
+value = ""
+placeholder = "nouveau1, nouveau2..."
+help = "Noms séparés par virgule pour renommer les colonnes de l'import"
 
 # JSON
 [[loading.adv_configs.json]]
@@ -804,6 +836,14 @@ description = "Ligne d'en-tête"
 value = "infer"
 options = ["infer", "0", "None"]
 help = "Ligne utilisée comme en-tête"
+
+[[loading.adv_configs.sklearn]]
+id = "rename_cols"
+type = "text"
+description = "Renommer cols"
+value = ""
+placeholder = "nouveau1, nouveau2..."
+help = "Noms séparés par virgule pour renommer les colonnes du dataset"
 
 [loading.preview]
 max_rows = 5
@@ -1553,6 +1593,16 @@ label = "UMAP (2D)"
 value = "umap"
 params = { n_components = 2, n_neighbors = 15, random_state = 42 }
 
+[[selection.methods]]
+label = "RAPIDS cuML t-SNE (2D)"
+value = "tsne_cuml"
+params = { n_components = 2 }
+
+[[selection.methods]]
+label = "t-SNE (sklearn 2D)"
+value = "tsne"
+params = { n_components = 2, random_state = 42 }
+
 # ---------------------------------------------------------------------------
 # ÉTAPE 8 — DATASET BALANCING
 # ---------------------------------------------------------------------------
@@ -1681,6 +1731,24 @@ class_name = "MLPClassifier"
 module = "sklearn.neural_network"
 params = { hidden_layer_sizes = [100, 50], max_iter = 300, random_state = 42 }
 
+[[modeling.classification.binary]]
+name = "RAPIDS cuML KNN"
+class_name = "KNeighborsClassifier"
+module = "cuml.neighbors"
+params = { n_neighbors = 5 }
+
+[[modeling.classification.binary]]
+name = "RAPIDS cuML SVC"
+class_name = "SVC"
+module = "cuml.svm"
+params = { C = 1.0, kernel = "rbf" }
+
+[[modeling.classification.binary]]
+name = "RAPIDS cuML Random Forest"
+class_name = "RandomForestClassifier"
+module = "cuml.ensemble"
+params = { n_estimators = 200 }
+
 [[modeling.classification.multiclass]]
 name = "Random Forest"
 class_name = "RandomForestClassifier"
@@ -1698,6 +1766,24 @@ name = "LightGBM (multiclass)"
 class_name = "LGBMClassifier"
 module = "lightgbm"
 params = { n_estimators = 200, objective = "multiclass" }
+
+[[modeling.classification.multiclass]]
+name = "RAPIDS cuML KNN"
+class_name = "KNeighborsClassifier"
+module = "cuml.neighbors"
+params = { n_neighbors = 5 }
+
+[[modeling.classification.multiclass]]
+name = "RAPIDS cuML SVC"
+class_name = "SVC"
+module = "cuml.svm"
+params = { C = 1.0, kernel = "rbf" }
+
+[[modeling.classification.multiclass]]
+name = "RAPIDS cuML Random Forest"
+class_name = "RandomForestClassifier"
+module = "cuml.ensemble"
+params = { n_estimators = 200 }
 
 [[modeling.regression.continuous]]
 name = "Régression Linéaire"
@@ -1992,6 +2078,11 @@ iterations = { dist = "randint", low = 50, high = 400 }
 learning_rate = { dist = "uniform", loc = 0.01, scale = 0.3 }
 depth = { dist = "randint", low = 3, high = 10 }
 l2_leaf_reg = { dist = "uniform", loc = 1, scale = 9 }
+
+[optimization.search_spaces.cuSVC]
+C = { dist = "uniform", loc = 0.01, scale = 100 }
+gamma = ["scale", "auto", 0.1, 0.01]
+kernel = ["rbf"]
 
 [optimization.search_spaces.Ridge]
 alpha = { dist = "uniform", loc = 0.001, scale = 100 }
