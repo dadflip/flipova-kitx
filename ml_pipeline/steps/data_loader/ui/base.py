@@ -58,43 +58,47 @@ class DataSourceBlock:
         self._update_adv_opts()
         
         self.ui = widgets.VBox([
-            # Section: Identité & Contrôles rapides
+            # Pipeline Section 1: Identification & Identification
             widgets.HBox([
                 self.btn_remove,
+                widgets.HTML(f"<div style='font-size: 1.1em; font-weight: 700; color: #1e293b; margin-left: 8px;'>Source:</div>"),
                 self.name_in,
                 widgets.HTML("<div style='flex:1'></div>"),
                 self.btn_preview
-            ], layout=widgets.Layout(align_items="center", gap="12px", margin="0 0 15px 0")),
+            ], layout=widgets.Layout(align_items="center", gap="12px", padding="10px", background_color="#f1f5f9", border_radius="8px 8px 0 0")),
             
-            # Formulaire principal
-            widgets.HBox([
+            # Formulaire multi-étapes
+            widgets.VBox([
+                # Step 1: Input
                 widgets.VBox([
-                    widgets.HTML("<b style='font-size:0.85em; color:#64748b; text-transform:uppercase;'>📌 Source</b>"),
-                    self.src_mode,
-                    self.path_in,
-                    self.upload,
-                    self.paste_in,
-                    self.sklearn_dd,
-                    self.python_code,
+                    widgets.HTML("<div style='font-size: 0.75em; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 8px;'>Phase 1: Acquisition</div>"),
+                    widgets.HBox([self.src_mode, self.path_in, self.upload, self.paste_in, self.sklearn_dd, self.python_code], layout=widgets.Layout(align_items="center", gap="10px")),
                     widgets.HBox([self.chk_recursive, self.btn_scan], layout=widgets.Layout(align_items="center", gap="10px"))
-                ], layout=widgets.Layout(flex="2", margin="0 15px 0 0")),
+                ], layout=widgets.Layout(padding="12px", border_bottom="1px solid #f1f5f9")),
                 
+                # Step 2: Parsing
                 widgets.VBox([
-                    widgets.HTML("<b style='font-size:0.85em; color:#64748b; text-transform:uppercase;'>📊 Format</b>"),
+                    widgets.HTML("<div style='font-size: 0.75em; font-weight: 700; color: #64748b; text-transform: uppercase; margin: 8px 0;'>Phase 2: Typage et Parsing</div>"),
                     self.type_dd,
-                ], layout=widgets.Layout(flex="1"))
-            ], layout=widgets.Layout(align_items="flex-start")),
+                ], layout=widgets.Layout(padding="12px", border_bottom="1px solid #f1f5f9")),
+                
+                # Step 3: Advanced
+                widgets.VBox([
+                    widgets.HTML("<div style='font-size: 0.75em; font-weight: 700; color: #64748b; text-transform: uppercase; margin: 8px 0;'>Phase 3: Configuration de precision</div>"),
+                    self.dynamic_opts,
+                ], layout=widgets.Layout(padding="12px")),
+                
+            ], layout=widgets.Layout(width="100%", background_color="#ffffff", border="1px solid #e2e8f0", border_top="none", border_radius="0 0 8px 8px")),
             
             self.file_list_box,
-            self.dynamic_opts,
             self.out_preview
-        ], layout=widgets.Layout(border="1px solid #e2e8f0", padding="20px", margin="15px 0", border_radius="12px", background_color="#ffffff", box_shadow="0 4px 6px -1px rgba(0, 0, 0, 0.05)"))
+        ], layout=widgets.Layout(margin="15px 0", box_shadow="0 4px 6px -1px rgba(0, 0, 0, 0.05)"))
 
     def _on_upload_changed(self, change):
         if not self.upload.value: return
         with self.out_preview:
             clear_output(wait=True)
-            print("⏳ Sauvegarde du fichier en cours...")
+            print("Sauvegarde du fichier en cours...")
             try:
                 uploaded_file = self.upload.value[0] if isinstance(self.upload.value, tuple) else list(self.upload.value.values())[0]
                 content_bytes = bytes(uploaded_file['content'])
@@ -117,7 +121,7 @@ class DataSourceBlock:
             # Clear upload value to allow re-upload if needed
             self.upload.value = () if isinstance(self.upload.value, tuple) else {}
             clear_output()
-            print(f"✅ Fichier '{safe_name}' uploadé et sauvegardé dans '{file_path}'.\nChemin défini pour chargement/preview.")
+            print(f"Fichier '{safe_name}' uploade et sauvegarde dans '{file_path}'.\nChemin defini pour chargement/preview.")
             self._on_preview(None)
 
     def _on_src_mode_changed(self, change):
@@ -292,7 +296,7 @@ class DataSourceBlock:
             file_path = f"data/raw/sklearn_{dataset_name}.csv"
             if isinstance(df, pd.DataFrame):
                 df.to_csv(file_path, index=False)
-                print(f"📁 Dataset Sklearn '{dataset_name}' sauvegardé sur disque: {file_path}")
+                print(f"Dataset Sklearn '{dataset_name}' sauvegarde sur disque: {file_path}")
             return df, None
         
         if mode == "Upload" and self.upload.value:
@@ -317,7 +321,7 @@ class DataSourceBlock:
             src_content = file_path
             
             # Afficher un message temporaire (sera écrasé par preview ou clear_output si print est utilisé)
-            print(f"📁 Fichier {safe_name} uploadé et sauvegardé sur disque avec succès.")
+            print(f"Fichier {safe_name} uploade et sauvegarde sur disque avec succes.")
             
         elif mode == "Presse-papier" and self.paste_in.value:
             src_type = "upload"
@@ -425,6 +429,7 @@ class DataLoaderUI:
         self._build_ui()
         self._on_mode_change()
 
+    def _build_guide(self) -> widgets.Accordion:
         guide_html = """
         <div style='font-size:14px; line-height:1.6; color:#374151;'>
             <h4 style='color:#1e293b; margin-top:0;'>Guide du Chargement et Strategies</h4>
@@ -455,7 +460,7 @@ data = pd.read_csv('...')</pre>
         acc.set_title(0, "Guide explicatif des Outils de Chargement (Cliquez pour ouvrir)")
         return acc
 
-    def _section_title(self, text: str, icon: str = "⚡", color: str = "#6366f1") -> widgets.HTML:
+    def _section_title(self, text: str, icon: str = "Pipeline", color: str = "#6366f1") -> widgets.HTML:
         return widgets.HTML(f"<div style='font-size: 0.9em; font-weight: 700; color: {color}; margin: 15px 0 8px 0; display: flex; align-items: center; gap: 8px;'><span>{icon}</span> {text}</div>")
 
     def _build_ui(self):
@@ -517,14 +522,14 @@ data = pd.read_csv('...')</pre>
             path = "data/raw"
             if os.path.exists(path):
                 shutil.rmtree(path)
-                print(f"🗑️ Dossier '{path}' supprimé avec succès !")
+                print(f"Dossier '{path}' supprime avec succes !")
             else:
-                print("Le cache disque est déjà vide.")
+                print("Le cache disque est deja vide.")
             if hasattr(self.state, "data_raw"):
                 self.state.data_raw.clear()
             if hasattr(self.state, "data_types"):
                 self.state.data_types.clear()
-            print("🧹 Cache RAM (datasets en mémoire) vidé.")
+            print("Cache RAM (datasets en memoire) vide.")
 
     def _get_types_options(self):
         types = self.config.get("supported_types", {"CSV": "csv"})
@@ -645,14 +650,14 @@ data = pd.read_csv('...')</pre>
                    (mode == "Presse-papier" and not b.paste_in.value) or \
                    (mode == "URL/Chemin" and not b.path_in.value):
                     if len(self.blocks) == 1:
-                        print(f"⚠️ Source '{name}' vide, ignorée.")
+                        print(f"Source '{name}' vide, ignoree.")
                     continue
                 
                 print(f"-> Chargement '{name}'...")
                 data, err = b._get_data()
                 
                 if err:
-                    print(f"❌ Erreur pour '{name}' : {err}")
+                    print(f"Erreur pour '{name}' : {err}")
                 else:
                     self.state.data_raw[name] = data
                     self.state.data_types[name] = ds_type
@@ -677,13 +682,13 @@ data = pd.read_csv('...')</pre>
                                 json.dump(data, f)
                         # Pour Neo4j, Graphs et Textes complexes, une sauvegarde locale n'est pas forcement pertinente
                     except Exception as ex:
-                        print(f"⚠️ Impossible de persister '{name}' sur disque : {ex}")
+                        print(f"Impossible de persister '{name}' sur disque : {ex}")
                         
-                    print(f"✅ Succès: '{name}' chargé (Format: {ds_type})")
+                    print(f"Succes: '{name}' charge (Format: {ds_type})")
                     loaded_count += 1
             
             if loaded_count > 0:
-                print(f"🎉 Terminé! {loaded_count} dataset(s) chargés dans le state global.")
+                print(f"Termine! {loaded_count} dataset(s) charges dans le state global.")
                 # We could potentially split datasets here if `auto_split` is active
                 mode_val = self.mode_dd.value
                 if mode_val == "single" and mode_conf.get("auto_split") in ("Train/Test", "Train/Val/Test") and loaded_count == 1:
@@ -704,7 +709,7 @@ data = pd.read_csv('...')</pre>
                                 self.state.data_types["Train"] = ds_type
                                 self.state.data_raw["Test"] = te
                                 self.state.data_types["Test"] = ds_type
-                                print("✅ Train/Test créé avec succès.")
+                                print("Train/Test cree avec succes.")
                                 
                             elif mode_conf["auto_split"] == "Train/Val/Test":
                                 # train vs temp
@@ -719,12 +724,12 @@ data = pd.read_csv('...')</pre>
                                 self.state.data_types["Validation"] = ds_type
                                 self.state.data_raw["Test"] = te
                                 self.state.data_types["Test"] = ds_type
-                                print("✅ Train/Val/Test créé avec succès.")
+                                print("Train/Val/Test cree avec succes.")
                                 
                         except Exception as e:
-                            print(f"⚠️ Erreur lors de l'auto_split: {e}")
+                            print(f"Erreur lors de l'auto_split: {e}")
                     else:
-                        print("⚠️ Auto split ignoré: les données ne sont pas des DataFrames tabulaires.")
+                        print("Auto split ignore: les donnees ne sont pas des DataFrames tabulaires.")
                         
                 self.state.log_step("loading", "all_datasets_loaded", {"count": loaded_count, "mode": mode_val})
 
