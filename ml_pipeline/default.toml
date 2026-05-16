@@ -9,10 +9,10 @@
 # META — Versioning, reproductibilité
 # ---------------------------------------------------------------------------
 [meta]
-version = "2.0.0"
-name = "ML Pipeline"
-author = ""
-description = ""
+version = "2.1.4"
+name = "Flipova KitX"
+author = "Flipova Designer"
+description = "Plateforme modulaire de Machine Learning pour l'exploration, le feature engineering et le déploiement de modèles prédictifs haute performance."
 global_random_state = 42
 global_verbose = false
 
