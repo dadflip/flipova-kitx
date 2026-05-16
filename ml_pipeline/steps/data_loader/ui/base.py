@@ -14,6 +14,7 @@ class DataSourceBlock:
         self.on_remove = on_remove
         
         self.name_in = widgets.Text(description="Nom:", value=name, layout=widgets.Layout(width="180px"), style={"description_width": "initial"})
+        type_options = [(k, v) for k, v in type_options if v != "sklearn"]
         self.type_dd = widgets.Dropdown(options=type_options, description="Format:", layout=widgets.Layout(width="220px"), style={"description_width": "initial"})
         self.src_mode = widgets.Dropdown(options=["URL/Chemin", "Upload", "Presse-papier", "Dossier Local", "Dataset Sklearn"], value="URL/Chemin", layout=widgets.Layout(width="120px"))
         self.path_in = widgets.Text(placeholder="http:// ou /chemin...", layout=widgets.Layout(flex="1", min_width="200px"))
@@ -98,6 +99,7 @@ class DataSourceBlock:
     def _on_src_mode_changed(self, change):
         val = change.new
         if val == "Upload":
+            self.type_dd.layout.display = "flex"
             self.path_in.layout.display = "none"
             self.paste_in.layout.display = "none"
             self.upload.layout.display = "flex"
@@ -106,6 +108,7 @@ class DataSourceBlock:
             self.btn_scan.layout.display = "none"
             self.file_list_box.layout.display = "none"
         elif val == "Presse-papier":
+            self.type_dd.layout.display = "flex"
             self.path_in.layout.display = "none"
             self.upload.layout.display = "none"
             self.paste_in.layout.display = "flex"
@@ -114,6 +117,7 @@ class DataSourceBlock:
             self.btn_scan.layout.display = "none"
             self.file_list_box.layout.display = "none"
         elif val == "Dossier Local":
+            self.type_dd.layout.display = "flex"
             self.upload.layout.display = "none"
             self.paste_in.layout.display = "none"
             self.path_in.layout.display = "flex"
@@ -123,6 +127,7 @@ class DataSourceBlock:
             self.btn_scan.layout.display = "flex"
             self.file_list_box.layout.display = "flex"
         elif val == "Dataset Sklearn":
+            self.type_dd.layout.display = "none"
             self.upload.layout.display = "none"
             self.paste_in.layout.display = "none"
             self.path_in.layout.display = "none"
@@ -131,6 +136,7 @@ class DataSourceBlock:
             self.btn_scan.layout.display = "none"
             self.file_list_box.layout.display = "none"
         else:
+            self.type_dd.layout.display = "flex"
             self.upload.layout.display = "none"
             self.paste_in.layout.display = "none"
             self.path_in.layout.display = "flex"
@@ -139,12 +145,14 @@ class DataSourceBlock:
             self.chk_recursive.layout.display = "none"
             self.btn_scan.layout.display = "none"
             self.file_list_box.layout.display = "none"
+            
+        self._update_adv_opts()
 
     def _update_adv_opts(self, change=None):
         ds_type = self.type_dd.value
         
-        if ds_type == "sklearn" and self.src_mode.value != "Dataset Sklearn":
-            self.src_mode.value = "Dataset Sklearn"
+        if self.src_mode.value == "Dataset Sklearn":
+            ds_type = "sklearn"
             
         opts = self.adv_configs_map.get(ds_type, [])
         self.opt_widgets = {}

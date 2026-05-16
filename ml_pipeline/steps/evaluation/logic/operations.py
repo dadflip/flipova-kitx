@@ -79,12 +79,32 @@ def compute_metrics(model, X_eval, y_eval, task, subtask, cfg_metrics) -> dict:
 
 def plot_confusion_matrix(model, X_eval, y_eval, model_name, ax=None):
     from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+    import seaborn as sns
     y_pred = model.predict(X_eval)
     cm = confusion_matrix(y_eval, y_pred)
-    disp = ConfusionMatrixDisplay(cm)
     if ax is None:
         f, ax = fig(5, 4, f"Confusion Matrix — {model_name}")
-    disp.plot(ax=ax, colorbar=False, cmap="Blues")
+        
+    if cm.shape == (2, 2):
+        group_names = ['True Negative (TN)', 'False Positive (FP)', 'False Negative (FN)', 'True Positive (TP)']
+        group_counts = [f"{value:0.0f}" for value in cm.flatten()]
+        labels = [f"{v1}\n{v2}" for v1, v2 in zip(group_names, group_counts)]
+        labels = np.asarray(labels).reshape(2, 2)
+        
+        sns.heatmap(cm, annot=labels, fmt='', cmap="Blues", cbar=False, ax=ax,
+                    annot_kws={"size": 9, "fontweight": "bold"}, 
+                    linecolor="white", linewidths=1)
+        ax.set_xlabel('Predicted label', color=_GRAY)
+        ax.set_ylabel('True label', color=_GRAY)
+        
+        if hasattr(model, 'classes_'):
+            classes = model.classes_
+            ax.set_xticklabels(classes)
+            ax.set_yticklabels(classes)
+    else:
+        disp = ConfusionMatrixDisplay(cm, display_labels=getattr(model, 'classes_', None))
+        disp.plot(ax=ax, colorbar=False, cmap="Blues")
+        
     ax.set_title(f"Confusion Matrix — {model_name}", fontsize=10, fontweight="bold", color="#1e293b")
     ax.set_facecolor(_BG)
     return ax.figure
@@ -113,11 +133,22 @@ def plot_residuals(model, X_eval, y_eval, model_name):
     axes[2].hist(residuals, bins=30, color=_PAL[2], edgecolor="white", alpha=0.85); axes[2].set_xlabel("Residual",color=_GRAY); axes[2].set_ylabel("Count",color=_GRAY); axes[2].set_title("Residual Distribution",fontsize=10,fontweight="bold",color="#1e293b")
     plt.tight_layout(); return f
 
-def plot_feature_importance(model, feature_names, model_name, top_n=20):
+def plot_feature_importance(model, feature_names, model_name, top_n=20, X=None, y=None):
     importance = None
     if hasattr(model, "feature_importances_"): importance = model.feature_importances_
-    elif hasattr(model, "coef_"):
-        coef = model.coef_; importance = np.abs(coef).mean(axis=0) if coef.ndim > 1 else np.abs(coef)
+    elif hasattr(model, "coef_") and getattr(model, "coef_", None) is not None:
+        coef = model.coef_
+        if len(coef) > 0:
+            importance = np.abs(coef).mean(axis=0) if coef.ndim > 1 else np.abs(coef)
+    
+    if importance is None and X is not None and y is not None:
+        try:
+            from sklearn.inspection import permutation_importance
+            r = permutation_importance(model, X, y, n_repeats=3, random_state=42)
+            importance = r.importances_mean
+        except Exception:
+            pass
+
     if importance is None: return None
     idx = np.argsort(importance)[-top_n:]
     f, ax = fig(8, max(4, len(idx)*0.35), f"Feature Importance — {model_name}")

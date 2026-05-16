@@ -489,18 +489,31 @@ class TabularFeatureEngUI:
             
             if not new_or_mod:
                 self._notify(self.formula_out, "No new/modified columns detected.", True); return
-                
-            if preview:
-                with self.formula_out:
-                    clear_output(wait=True)
-                    display(HTML(f"<b style='color:#0ea5e9;'>Preview — {len(new_or_mod)} column(s) :</b>"))
-                    display(pd.DataFrame({k: v for k, v in new_or_mod.items()}).head(10))
+            
+            if "__replaced__" in new_or_mod:
+                if preview:
+                    with self.formula_out:
+                        clear_output(wait=True)
+                        display(HTML(f"<b style='color:#0ea5e9;'>Preview — Full Dataset Replaced :</b>"))
+                        display(res_df.head(10))
+                else:
+                    self.tabular_datasets[self.current_ds] = res_df
+                    self.state.log_step("Feature Eng", "Custom Code applied (DataFrame replaced)", {})
+                    self._propagate_to_state(); self._refresh_columns()
+                    self._notify(self.formula_out, f"Applied (Dataset replaced) — {len(res_df)} rows, {len(res_df.columns)} cols")
+                    self._render_preview()
             else:
-                self.tabular_datasets[self.current_ds] = res_df
-                self.state.log_step("Feature Eng", "Custom Formula applied", {"columns": list(new_or_mod.keys())})
-                self._propagate_to_state(); self._refresh_columns()
-                self._notify(self.formula_out, f"Applied {len(new_or_mod)} column(s) : {', '.join(new_or_mod)}")
-                self._render_preview()
+                if preview:
+                    with self.formula_out:
+                        clear_output(wait=True)
+                        display(HTML(f"<b style='color:#0ea5e9;'>Preview — {len(new_or_mod)} column(s) :</b>"))
+                        display(pd.DataFrame({k: v for k, v in new_or_mod.items()}).head(10))
+                else:
+                    self.tabular_datasets[self.current_ds] = res_df
+                    self.state.log_step("Feature Eng", "Custom Formula applied", {"columns": list(new_or_mod.keys())})
+                    self._propagate_to_state(); self._refresh_columns()
+                    self._notify(self.formula_out, f"Applied {len(new_or_mod)} column(s) : {', '.join(new_or_mod)}")
+                    self._render_preview()
         except Exception:
             with self.formula_out:
                 clear_output(wait=True)
@@ -687,6 +700,16 @@ class TabularFeatureEngUI:
                     self.state.log_step("Feature Eng", "Column deleted", {"col": col})
                     self._propagate_to_state(); self._refresh_columns()
                     self._notify(self.manage_out, f"Deleted '{col}'"); self._render_preview()
+            elif action == "Drop & Keep for Submission":
+                if col in df.columns:
+                    if not hasattr(self.state, "aside_features"):
+                        self.state.aside_features = {}
+                    self.state.aside_features[col] = df[col].copy()
+                    df.drop(columns=[col], inplace=True)
+                    self.tabular_datasets[self.current_ds] = df
+                    self.state.log_step("Feature Eng", "Column stored aside", {"col": col})
+                    self._propagate_to_state(); self._refresh_columns()
+                    self._notify(self.manage_out, f"Dropped & stored '{col}'"); self._render_preview()
             elif action == "Duplicate":
                 new_name = self.manage_new_name.value or f"{col}_copy"
                 if new_name in df.columns:
@@ -766,7 +789,7 @@ class FeatureEngUI:
         elif ds_type == "text":
             from .text import build_text_ui
             build_text_ui(self, data)
-        elif ds_type == "graph":
+        elif ds_type in ("graph", "ontology"):
             from .graph import build_graph_ui
             build_graph_ui(self, data)
         else:

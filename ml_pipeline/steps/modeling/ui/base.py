@@ -43,12 +43,25 @@ class ModelingUI:
         if isinstance(catalog, dict):
             catalog = []
         rows = []
+        
+        slow_models = ["SVC", "SVR", "MLPClassifier", "MLPRegressor", "KNeighborsClassifier", "CatBoostClassifier", "Node2Vec", "GaussianProcessClassifier", "GaussianProcessRegressor"]
+        
         for m in catalog:
             if isinstance(m, dict) and "name" in m:
-                cb = widgets.Checkbox(value=False, description=m["name"])
+                is_slow = m.get("class_name") in slow_models
+                
+                if is_slow:
+                    desc = f"<b>{m['name']}</b> <span style='color:#f59e0b;font-size:0.85em;'>(⚠️ Lent sur gros datasets)</span>"
+                    cb = widgets.Checkbox(value=False, description="")
+                    # Wrap checkbox and description together to render HTML safely
+                    ui_row = widgets.HBox([cb, widgets.HTML(desc)])
+                else:
+                    cb = widgets.Checkbox(value=False, description=m["name"])
+                    ui_row = cb
+                    
                 self._model_checkboxes[m["name"]] = {"checkbox": cb, "config": m}
-                rows.append(cb)
-        self.chk_container.children = rows or [widgets.HTML("<div style='color:#64748b;'>Aucun modèle pour cette config.</div>")]
+                rows.append(ui_row)
+        self.chk_container.children = tuple(rows) or [widgets.HTML("<div style='color:#64748b;'>Aucun modèle pour cette config.</div>")]
 
     def _on_task_changed(self, change) -> None:
         if change["new"]:
@@ -181,6 +194,10 @@ class ModelingUI:
                     display(HTML(f"<div style='color:#ef4444;'>Erreur import : {name}</div>")); continue
                 display(HTML(f"<hr style='border:1px solid #f1f5f9;'><b style='color:#1e293b;'>Entraînement : {name}</b>"))
                 params = cfg.get("params", {}).copy()
+                for pk, pv in list(params.items()):
+                    if pv == "null":
+                        params[pk] = None
+                
                 if hasattr(self.state, "imbalance_config") and target_col:
                     if self.state.imbalance_config.get(target_col, {}).get("method") == "class_weights":
                         try:

@@ -297,7 +297,6 @@ sklearn_datasets = ["iris", "wine", "breast_cancer", "diabetes", "digits", "cali
 "Ontologie (.owl / .rdf / .ttl)" = "ontology"
 "Batch ZIP (dossier de fichiers)" = "zip"
 "Presse-papier (coller du CSV)" = "clipboard"
-"Dataset sklearn" = "sklearn"
 "Neo4j Database" = "neo4j"
 "Vidéo (.mp4 / YouTube)" = "video"
 "Page Web / Extracteur KG" = "web"
@@ -837,17 +836,17 @@ value = "infer"
 options = ["infer", "0", "None"]
 help = "Ligne utilisée comme en-tête"
 
-[[loading.adv_configs.sklearn]]
-id = "rename_cols"
-type = "text"
-description = "Renommer cols"
-value = ""
-placeholder = "nouveau1, nouveau2..."
-help = "Noms séparés par virgule pour renommer les colonnes du dataset"
-
 [loading.preview]
 max_rows = 5
 sample_threshold = 100_000
+
+[[loading.adv_configs.sklearn]]
+id = "nrows"
+type = "text"
+description = "Nb lignes max"
+value = ""
+placeholder = "toutes"
+help = "Nombre maximum de lignes à charger"
 sample_size = 10_000
 onto_triplets_per_node = 3
 onto_max_source_nodes = 8
@@ -950,7 +949,7 @@ math_operations = ["+", "-", "*", "/", "log(A)", "exp(A)", "sqrt(A)", "A^2", "A^
 text_operations = ["Lowercase", "Uppercase", "Length", "Extract Regex", "Replace", "Split & Keep N"]
 date_operations = ["Year", "Month", "Day", "DayOfWeek", "Hour", "Minute", "IsWeekend"]
 viz_types = ["auto", "scatter", "line", "bar", "box", "violin", "hist", "kde"]
-manage_actions = ["Set Type (Meta)", "Duplicate", "Delete"]
+manage_actions = ["Set Type (Meta)", "Duplicate", "Delete", "Drop & Keep for Submission"]
 
 [feature_eng.binning]
 strategies = ["Equal Width (Cut)", "Equal Frequency (Qcut)", "Custom Edges"]

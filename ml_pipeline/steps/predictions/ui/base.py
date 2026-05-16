@@ -110,8 +110,14 @@ class PredictionsUI:
             X_raw = None; y_true = None
         if not is_valid(X_raw): return None, None, None
         id_col = self.txt_id_col.value.strip(); id_series = None
-        if id_col and isinstance(X_raw, pd.DataFrame) and id_col in X_raw.columns:
-            id_series = X_raw[id_col].copy(); X_raw = X_raw.drop(columns=[id_col])
+        if id_col and isinstance(X_raw, pd.DataFrame):
+            if id_col in X_raw.columns:
+                id_series = X_raw[id_col].copy()
+                X_raw = X_raw.drop(columns=[id_col])
+            elif src == "__X_test__" and hasattr(self.state, "aside_features") and id_col in self.state.aside_features:
+                id_series = self.state.aside_features[id_col].loc[X_raw.index].copy()
+            elif src.startswith("raw::") and hasattr(self.state, "aside_features") and id_col in self.state.aside_features:
+                id_series = self.state.aside_features[id_col].loc[X_raw.index].copy()
         return X_raw, y_true, id_series
 
     def _resolve_fill_value(self, X_train):

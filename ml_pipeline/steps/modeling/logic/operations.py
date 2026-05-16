@@ -4,9 +4,13 @@ import importlib
 def dynamic_import(import_string: str):
     if not import_string:
         return None
-    parts = import_string.split(".")
-    module = importlib.import_module(".".join(parts[:-1]))
-    return getattr(module, parts[-1])
+    try:
+        parts = import_string.split(".")
+        module = importlib.import_module(".".join(parts[:-1]))
+        return getattr(module, parts[-1])
+    except Exception as e:
+        print(f"ImportError ({import_string}): {e}")
+        return None
 
 def is_inference_mode(splits: dict) -> bool:
     y_test = splits.get("y_test")

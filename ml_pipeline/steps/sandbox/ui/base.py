@@ -83,6 +83,8 @@ class SandboxUI:
         load_random_btn = widgets.Button(description="Remplir avec valeur aléatoire (X_test)", icon="random", button_style="info", layout=widgets.Layout(width="300px"))
         load_random_btn.on_click(self._load_random)
         
+        self.int_max_display_shap = widgets.BoundedIntText(value=10, min=3, max=100, step=1, description="Max SHAP vars:", style={"description_width": "initial"}, layout=widgets.Layout(width="180px"))
+        
         self.form_box = self._build_form(self.X_train)
         
         self.btn_predict = widgets.Button(description="Prédire & Expliquer (SHAP/LIME)", button_style=styles.BTN_PRIMARY, layout=widgets.Layout(width="280px"))
@@ -93,7 +95,7 @@ class SandboxUI:
         self.ui = widgets.VBox([
             top_bar,
             styles.help_box("<b>Bac à sable :</b> Entrez manuellement les caractéristiques (features encodées telles qu'attendues par le modèle) pour générer une prédiction à la volée. L'explicabilité (SHAP) montrera l'impact de chaque variable.", "#6366f1"),
-            widgets.HBox([self.dd_model, load_random_btn], layout=widgets.Layout(gap="16px", align_items="center", margin="0 0 16px 0")),
+            widgets.HBox([self.dd_model, load_random_btn, self.int_max_display_shap], layout=widgets.Layout(gap="16px", align_items="center", margin="0 0 16px 0")),
             widgets.HTML("<b style='color:#374151;'>Caractéristiques (Features) :</b>"),
             self.form_box,
             self.btn_predict,
@@ -200,9 +202,9 @@ class SandboxUI:
                 if len(shap_values.shape) == 3:
                      # Multiclass: explain the predicted class
                      pred_class = int(pred[0])
-                     shap.plots.waterfall(shap_values[0, :, pred_class], show=False)
+                     shap.plots.waterfall(shap_values[0, :, pred_class], max_display=self.int_max_display_shap.value, show=False)
                 else:
-                     shap.plots.waterfall(shap_values[0], show=False)
+                     shap.plots.waterfall(shap_values[0], max_display=self.int_max_display_shap.value, show=False)
                      
                 plt.tight_layout()
                 display(fig)

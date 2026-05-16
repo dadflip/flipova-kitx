@@ -171,6 +171,11 @@ def _load_data_internal(ds_type, source_type, path_or_content, adv_options):
             # Fallback if as_frame=True didn't work (e.g. older sklearn)
             df = pd.DataFrame(bunch.data, columns=bunch.feature_names)
             df['target'] = bunch.target
+            
+        if "nrows" in adv_options and str(adv_options["nrows"]).isdigit():
+            limit = int(adv_options["nrows"])
+            df = df.head(limit)
+            
         return df
         
     else:

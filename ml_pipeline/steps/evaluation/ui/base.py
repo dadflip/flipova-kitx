@@ -98,9 +98,10 @@ class EvaluationUI:
         self.out_exp = widgets.Output()
         exp_types = [e["name"] for e in self.cfg_exp.get("tabular", [])] or ["SHAP (Tree/Kernel)", "LIME (Tabular)"]
         self.dd_explainer = widgets.Dropdown(options=exp_types, description="Explainer:", layout=widgets.Layout(width="280px"))
+        self.int_max_display = widgets.BoundedIntText(value=15, min=5, max=100, step=1, description="Max display:", style={"description_width": "initial"}, layout=widgets.Layout(width="180px"))
         self.btn_exp = widgets.Button(description="Run explanation", button_style="primary", layout=widgets.Layout(width="220px", margin="8px 0"))
         self.btn_exp.on_click(self._on_explainability)
-        tab4 = widgets.VBox([styles.help_box("<b>Interpretability :</b> SHAP et LIME.", "#8b5cf6"), widgets.HBox([self.dd_explainer, self.btn_exp]), self.out_exp])
+        tab4 = widgets.VBox([styles.help_box("<b>Interpretability :</b> SHAP et LIME.", "#8b5cf6"), widgets.HBox([self.dd_explainer, self.int_max_display, self.btn_exp]), self.out_exp])
         self.out_compare = widgets.Output()
         self.btn_compare = widgets.Button(description="Compare models", button_style="primary", layout=widgets.Layout(width="220px", margin="8px 0"))
         self.btn_compare.on_click(self._on_compare)
@@ -208,10 +209,11 @@ class EvaluationUI:
             if not is_valid(X_train): display(_warn("X_train missing.")); return
             feature_names = list(X_train.columns) if hasattr(X_train, "columns") else [f"f{i}" for i in range(X_train.shape[1])]
             for name, model in self._selected_models().items():
+                X_eval, y_eval = resolve_eval_data(self.splits, self.predictions, name)
                 display(_section(f"Feature Importance — {name}", "#3b82f6"))
-                fig = plot_feature_importance(model, feature_names, name)
+                fig = plot_feature_importance(model, feature_names, name, X=X_eval, y=y_eval)
                 if fig: display(fig); plt.close(fig)
-                else: display(_warn(f"{name} does not expose feature_importances_ or coef_."))
+                else: display(_warn(f"{name} does not expose feature_importances_ or coef_ and permutation importance failed."))
 
     def _on_lc_plots(self, b) -> None:
         with self.out_fi:
@@ -244,12 +246,23 @@ class EvaluationUI:
                     display(_info("Computing SHAP values..."))
                     try:
                         import shap
-                        explainer = shap.Explainer(model, X_train)
-                        shap_values = explainer(X_eval[:min(100, len(X_eval))])
+                        try:
+                            explainer = shap.Explainer(model, X_train)
+                            shap_values = explainer(X_eval[:min(100, len(X_eval))])
+                        except Exception:
+                            predict_fn = model.predict_proba if hasattr(model, "predict_proba") and self.task == "classification" else model.predict
+                            bg_data = shap.maskers.Independent(X_train.sample(min(100, len(X_train)), random_state=42) if hasattr(X_train, "sample") else X_train)
+                            explainer = shap.Explainer(predict_fn, bg_data)
+                            shap_values = explainer(X_eval[:min(100, len(X_eval))])
+                        
+                        shap_v = shap_values
+                        if len(shap_values.shape) == 3 and self.task == "classification":
+                            shap_v = shap_values[:, :, 1] if shap_values.shape[-1] >= 2 else shap_values[:, :, 0]
+                            
                         fig, axes = plt.subplots(1, 2, figsize=(14, 5)); fig.patch.set_facecolor(_BG)
-                        plt.sca(axes[0]); shap.plots.beeswarm(shap_values, max_display=15, show=False)
-                        plt.sca(axes[1]); shap.plots.bar(shap_values, max_display=15, show=False)
-                        plt.tight_layout(); clear_output(wait=True); display(_section(f"SHAP — {model_name}", "#8b5cf6")); display(fig); plt.close(fig)
+                        plt.sca(axes[0]); shap.plots.beeswarm(shap_v, max_display=self.int_max_display.value, show=False)
+                        plt.sca(axes[1]); shap.plots.bar(shap_values, max_display=self.int_max_display.value, show=False)
+                        plt.tight_layout(); display(fig); plt.close(fig)
                     except ImportError: display(_warn("SHAP not available — pip install shap"))
                     except Exception as e: display(_warn(f"SHAP error: {e}"))
                 elif "LIME" in explainer_name:
@@ -261,7 +274,7 @@ class EvaluationUI:
                         predict_fn = model.predict_proba if hasattr(model, "predict_proba") and self.task == "classification" else model.predict
                         exp = exp_obj.explain_instance(X_eval.iloc[0].values if hasattr(X_eval, "iloc") else X_eval[0], predict_fn, num_features=15)
                         fig = exp.as_pyplot_figure(); fig.patch.set_facecolor(_BG); plt.tight_layout()
-                        clear_output(wait=True); display(_section(f"LIME — {model_name}", "#8b5cf6")); display(fig); plt.close(fig)
+                        display(fig); plt.close(fig)
                     except ImportError: display(_warn("LIME not available — pip install lime"))
                     except Exception as e: display(_warn(f"LIME error: {e}"))
 

@@ -82,11 +82,19 @@ class OptimizationUI:
         self.int_cv = widgets.IntSlider(value=5, min=2, max=10, step=1, description="CV folds :", style={"description_width": "initial"}, layout=widgets.Layout(width="300px"))
         self.dd_scoring = widgets.Dropdown(options=["roc_auc","f1","f1_macro","f1_weighted","accuracy","precision","recall","r2","neg_mean_absolute_error","neg_mean_squared_error","neg_root_mean_squared_error"], value=scoring_default, description="Scoring :", style={"description_width": "initial"}, layout=widgets.Layout(width="300px"))
         self.chk_refit = widgets.Checkbox(value=True, description="Refit sur toutes les données (X_train complet)", layout=widgets.Layout(width="380px"))
-        self.search_space_editor = widgets.Textarea(placeholder="# Espace de recherche pré-rempli à la sélection du modèle.\n# randint(a, b), uniform(loc, scale), [val1, val2, ...]", layout=widgets.Layout(width="100%", height="240px"))
+        
+        self.view_mode = widgets.RadioButtons(options=["Vue Formulaire", "Vue JSON"], value="Vue Formulaire", layout=widgets.Layout(width="180px"))
+        self.search_space_editor = widgets.Textarea(placeholder="{\n    'param_name': [val1, val2, val3]\n}", layout=widgets.Layout(width="100%", height="240px", display="none"))
+        self.form_container = widgets.VBox(layout=widgets.Layout(width="100%", border="1px solid #e2e8f0", padding="10px", border_radius="6px"))
+        
+        # We fill after creating the widgets
         self._fill_search_space(self.dd_model.value)
+        
+        self.view_mode.observe(self._on_view_mode_change, names="value")
         self.btn_reset_space = widgets.Button(description="Réinitialiser espace", layout=widgets.Layout(width="180px", height="28px"))
         self.btn_reset_space.on_click(lambda _: self._fill_search_space(self.dd_model.value))
         self.chk_compare_all = widgets.Checkbox(value=True, description="Comparer tous les modèles après optimisation", layout=widgets.Layout(width="400px"))
+        
         self.btn_run = widgets.Button(description="Lancer l'optimisation", button_style=styles.BTN_PRIMARY, icon="cogs", layout=styles.LAYOUT_BTN_LARGE)
         self.btn_run.on_click(self._run_optimization)
         self.dd_best_manual = widgets.Dropdown(options=list(self.models.keys()), description="Définir comme meilleur :", style={"description_width": "initial"}, layout=widgets.Layout(width="320px"))
@@ -94,6 +102,13 @@ class OptimizationUI:
         self.btn_set_best.on_click(self._set_best_manual)
         self.output = widgets.Output()
         self.dd_method.observe(lambda c: setattr(self.int_n_iter.layout, "display", "flex" if c["new"] in ["randomized", "optuna"] else "none"), names="value")
+        
+        editor_box = widgets.VBox([
+            widgets.HBox([self.view_mode, self.btn_reset_space], layout=widgets.Layout(justify_content="space-between", align_items="center", margin="0 0 8px 0")),
+            self.form_container,
+            self.search_space_editor
+        ])
+        
         self.ui = widgets.VBox([
             top_bar,
             styles.help_box("<b>Optimisation des hyperparamètres</b><br><li><b>Optuna</b> : (Recommandé) Smart, s'adapte à l'espace, évite les tests inutiles.</li><li><b>RandomizedSearchCV</b> : Aléatoire, limite le temps pour l'entraînement.</li><li><b>GridSearchCV</b> : Exhaustif (peut être infiniment long).</li>", "#6366f1"),
@@ -105,8 +120,7 @@ class OptimizationUI:
             self.chk_refit,
             widgets.HTML("<hr style='border:1px solid #f1f5f9;margin:8px 0;'>"),
             widgets.HTML("<b style='color:#374151;font-size:0.9em;'>Espace de recherche</b>"),
-            self.search_space_editor,
-            widgets.HBox([self.btn_reset_space], layout=widgets.Layout(margin="4px 0 8px 0")),
+            editor_box,
             widgets.HTML("<hr style='border:1px solid #f1f5f9;margin:8px 0;'>"),
             self.chk_compare_all, self.btn_run,
             widgets.HTML("<hr style='border:1px solid #f1f5f9;margin:12px 0;'>"),
@@ -115,16 +129,99 @@ class OptimizationUI:
             self.output,
         ], layout=widgets.Layout(width="100%", max_width="1000px", border="1px solid #e5e7eb", padding="18px", border_radius="10px", background_color="#ffffff"))
 
+    def _on_view_mode_change(self, change):
+        is_form = change["new"] == "Vue Formulaire"
+        self.form_container.layout.display = "flex" if is_form else "none"
+        self.search_space_editor.layout.display = "none" if is_form else "flex"
+        # If switching back to form, try to read from JSON
+        if is_form:
+            try:
+                space = parse_search_space(self.search_space_editor.value)
+                self._build_form(space)
+            except Exception as e:
+                self.form_container.children = [widgets.HTML(f"<div style='color:#ef4444;'>JSON invalide. Corrigez-le avant de revenir à la vue Formulaire.<br><small>{e}</small></div>")]
+
     def _on_model_change(self, change) -> None:
         if change["new"]: self._fill_search_space(change["new"])
 
     def _fill_search_space(self, model_name: str) -> None:
         model = self.models.get(model_name)
         if model is None: return
-        space = default_search_space(model.__class__.__name__)
-        self.search_space_editor.value = serialize_search_space(space) if space else (
-            f"# Aucun espace prédéfini pour {model.__class__.__name__}.\n"
-            f"{{\n    'param_name': [val1, val2, val3],\n}}")
+        
+        space = self.config.get("optimization", {}).get("search_spaces", {}).get(model.__class__.__name__)
+        if not space:
+            space = default_search_space(model.__class__.__name__)
+            
+        if space:
+            self.search_space_editor.value = serialize_search_space(space)
+            self._build_form(space)
+        else:
+            self.search_space_editor.value = "{\n}"
+            self.form_container.children = [widgets.HTML("<div style='color:#64748b;'>Aucun espace prédéfini.</div>")]
+
+    def _build_form(self, space_dict):
+        rows = []
+        import json
+        for k, v in space_dict.items():
+            lbl = widgets.HTML(f"<b style='min-width:160px;display:inline-block;color:#334155;'>{k}</b>")
+            
+            if isinstance(v, dict) and v.get("dist") == "randint":
+                w_type = widgets.HTML("<span style='color:#10b981;min-width:80px;display:inline-block;font-size:0.85em;background:#d1fae5;padding:2px 8px;border-radius:12px;text-align:center;'>Entier</span>")
+                w_min = widgets.IntText(value=v.get("low", 0), description="min:", layout=widgets.Layout(width="110px"), style={"description_width": "30px"})
+                w_max = widgets.IntText(value=v.get("high", 10), description="max:", layout=widgets.Layout(width="110px"), style={"description_width": "35px"})
+                
+                def on_change(change, key=k, wmin=w_min, wmax=w_max):
+                    self._update_json_from_form_range(key, "randint", wmin.value, wmax.value)
+                    
+                w_min.observe(on_change, names="value"); w_max.observe(on_change, names="value")
+                row = widgets.HBox([lbl, w_type, w_min, w_max], layout=widgets.Layout(margin="4px 0", align_items="center", gap="10px"))
+            
+            elif isinstance(v, dict) and v.get("dist") == "uniform":
+                w_type = widgets.HTML("<span style='color:#3b82f6;min-width:80px;display:inline-block;font-size:0.85em;background:#dbeafe;padding:2px 8px;border-radius:12px;text-align:center;'>Décimal</span>")
+                w_min = widgets.FloatText(value=v.get("loc", 0.0), description="min:", layout=widgets.Layout(width="110px"), style={"description_width": "30px"})
+                w_max = widgets.FloatText(value=v.get("loc", 0.0) + v.get("scale", 1.0), description="max:", layout=widgets.Layout(width="110px"), style={"description_width": "35px"})
+                
+                def on_change(change, key=k, wmin=w_min, wmax=w_max):
+                    self._update_json_from_form_range(key, "uniform", wmin.value, wmax.value)
+                    
+                w_min.observe(on_change, names="value"); w_max.observe(on_change, names="value")
+                row = widgets.HBox([lbl, w_type, w_min, w_max], layout=widgets.Layout(margin="4px 0", align_items="center", gap="10px"))
+            
+            else:
+                w_type = widgets.HTML("<span style='color:#f59e0b;min-width:80px;display:inline-block;font-size:0.85em;background:#fef3c7;padding:2px 8px;border-radius:12px;text-align:center;'>Liste/Fixe</span>")
+                txt_val = json.dumps(v)
+                w_list = widgets.Text(value=txt_val, layout=widgets.Layout(width="300px"))
+                
+                def on_change(change, key=k, wlist=w_list):
+                    self._update_json_from_form_list(key, wlist.value)
+                    
+                w_list.observe(on_change, names="value")
+                row = widgets.HBox([lbl, w_type, w_list], layout=widgets.Layout(margin="4px 0", align_items="center", gap="10px"))
+                
+            rows.append(row)
+        if not rows:
+            rows = [widgets.HTML("<div style='color:#64748b;'>Aucun paramètre configuré. Utilisez l'éditeur JSON pour ajouter des clés.</div>")]
+        self.form_container.children = rows
+
+    def _update_json_from_form_range(self, key, dist, val_min, val_max):
+        try:
+            space = parse_search_space(self.search_space_editor.value)
+            if dist == "randint": space[key] = {"dist": "randint", "low": val_min, "high": val_max}
+            else: space[key] = {"dist": "uniform", "loc": val_min, "scale": val_max - val_min}
+            self.search_space_editor.value = serialize_search_space(space)
+        except: pass
+
+    def _update_json_from_form_list(self, key, text_val):
+        try:
+            import json
+            txt = text_val.strip()
+            if not txt: return
+            txt = txt.replace("'", '"')
+            parsed_list = json.loads(txt)
+            space = parse_search_space(self.search_space_editor.value)
+            space[key] = parsed_list
+            self.search_space_editor.value = serialize_search_space(space)
+        except: pass
 
     def _run_optimization(self, b) -> None:
         with self.output:
@@ -141,6 +238,19 @@ class OptimizationUI:
             display(_info(f"Lancement <b>{method}</b> sur <b>{model_name}</b> | scoring={scoring} | CV={cv_fold} folds"))
             from sklearn.model_selection import StratifiedKFold, KFold, RandomizedSearchCV, GridSearchCV
             from sklearn.base import clone
+            import scipy.stats
+            
+            def to_scipy_space(json_dist):
+                res = {}
+                for k, v in json_dist.items():
+                    if isinstance(v, dict) and "dist" in v:
+                        if v["dist"] == "randint": res[k] = scipy.stats.randint(v.get("low", 0), v.get("high", 100))
+                        elif v["dist"] == "uniform": res[k] = scipy.stats.uniform(v.get("loc", 0.0), v.get("scale", 1.0))
+                        else: res[k] = v
+                    else:
+                        res[k] = v
+                return res
+
             cv_splitter = (StratifiedKFold(n_splits=cv_fold, shuffle=True, random_state=42)
                            if self.task == "classification"
                            else KFold(n_splits=cv_fold, shuffle=True, random_state=42))
@@ -158,12 +268,11 @@ class OptimizationUI:
                     def objective(trial):
                         params = {}
                         for k, v in param_dist.items():
-                            cls = type(v).__name__
-                            if hasattr(v, "a") and hasattr(v, "b") and "randint" in cls:
-                                params[k] = trial.suggest_int(k, v.a, v.b - 1)
-                            elif hasattr(v, "args") and "uniform" in cls:
-                                loc = v.args[0] if v.args else v.kwds.get("loc", 0)
-                                scale = v.args[1] if len(v.args) > 1 else v.kwds.get("scale", 1)
+                            if isinstance(v, dict) and v.get("dist") == "randint":
+                                params[k] = trial.suggest_int(k, v.get("low", 0), v.get("high", 100) - 1)
+                            elif isinstance(v, dict) and v.get("dist") == "uniform":
+                                loc = v.get("loc", 0.0)
+                                scale = v.get("scale", 1.0)
                                 params[k] = trial.suggest_float(k, loc, loc + scale)
                             elif isinstance(v, list):
                                 params[k] = trial.suggest_categorical(k, v)
@@ -198,11 +307,14 @@ class OptimizationUI:
                         searcher.cv_results_ = {}
                         
                 elif method == "randomized":
-                    searcher = RandomizedSearchCV(base_model, param_dist, n_iter=n_iter, scoring=scoring, cv=cv_splitter, n_jobs=-1, verbose=0, random_state=42, refit=True)
+                    scipy_dist = to_scipy_space(param_dist)
+                    searcher = RandomizedSearchCV(base_model, scipy_dist, n_iter=n_iter, scoring=scoring, cv=cv_splitter, n_jobs=-1, verbose=0, random_state=42, refit=True)
                     searcher.fit(X_tr, y_tr)
                     best_score = searcher.best_score_; best_params = searcher.best_params_; best_model = searcher.best_estimator_
                 else:
-                    searcher = GridSearchCV(base_model, param_dist, scoring=scoring, cv=cv_splitter, n_jobs=-1, verbose=0, refit=True)
+                    # GridSearchCV expects only lists
+                    grid_dist = {k: v for k, v in param_dist.items() if isinstance(v, list)}
+                    searcher = GridSearchCV(base_model, grid_dist, scoring=scoring, cv=cv_splitter, n_jobs=-1, verbose=0, refit=True)
                     searcher.fit(X_tr, y_tr)
                     best_score = searcher.best_score_; best_params = searcher.best_params_; best_model = searcher.best_estimator_
             except Exception as e: display(_warn(f"Erreur durant la recherche : {e}")); return

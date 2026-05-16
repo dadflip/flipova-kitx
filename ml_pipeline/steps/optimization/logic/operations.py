@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import json
 
 def is_valid(arr) -> bool:
     if arr is None: return False
@@ -19,54 +20,63 @@ def resolve_eval_data(splits, predictions, model_name):
     return Xv, yv
 
 def serialize_search_space(space: dict) -> str:
-    lines = ["{\n"]
-    for k, v in space.items():
-        cls = type(v).__name__
-        if hasattr(v, "a") and hasattr(v, "b") and cls in ("randint_frozen", "randint"):
-            serialized = f"randint({v.a}, {v.b})"
-        elif hasattr(v, "args") and cls in ("uniform_frozen", "uniform"):
-            loc, scale = v.args if v.args else (v.kwds.get("loc", 0), v.kwds.get("scale", 1))
-            serialized = f"uniform({loc}, {scale})"
-        elif hasattr(v, "dist") and hasattr(v, "args"):
-            serialized = f"{v.dist.name}({', '.join(repr(a) for a in v.args)})"
-        else:
-            serialized = repr(v)
-        lines.append(f"    '{k}': {serialized},\n")
-    lines.append("}")
-    return "".join(lines)
+    return json.dumps(space, indent=4)
 
 def parse_search_space(code: str) -> dict:
     from scipy.stats import randint, uniform
     code = code.strip()
-    if not code or all(l.strip().startswith("#") for l in code.splitlines() if l.strip()):
+    if not code:
         return {}
+        
     try:
-        ns = {"randint": randint, "uniform": uniform, "np": np, "None": None, "True": True, "False": False}
-        result = eval(code, {"__builtins__": {}}, ns)
+        # User may put python-like none/null, trying to json load
+        # Let's clean up a bit if they used python dict string by mistake
+        code = code.replace("'", '"')
+        code = code.replace("None", "null")
+        code = code.replace("True", "true")
+        code = code.replace("False", "false")
+        
+        # Remove comments
+        lines = [l for l in code.splitlines() if not l.strip().startswith("#")]
+        code = "\n".join(lines)
+        
+        result = json.loads(code)
+        
+        def replace_nulls(obj):
+            if isinstance(obj, dict):
+                return {k: replace_nulls(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [replace_nulls(v) for v in obj]
+            elif isinstance(obj, str) and obj == "null":
+                return None
+            return obj
+            
+        result = replace_nulls(result)
+        
         if not isinstance(result, dict):
-            raise ValueError("L'espace de recherche doit être un dict Python { ... }")
+            raise ValueError("L'espace de recherche doit être un dictionnaire JSON { ... }")
+            
         return result
-    except SyntaxError as e:
-        raise ValueError(f"Syntaxe invalide à la ligne {e.lineno} : {e.msg}")
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Format JSON invalide : {e}")
     except Exception as e:
         raise ValueError(f"Erreur d'évaluation : {e}")
 
 def default_search_space(model_class_name: str) -> dict:
-    from scipy.stats import randint, uniform
     spaces = {
-        "LogisticRegression":          {"C": uniform(0.01, 10), "solver": ["lbfgs","saga"], "max_iter": [500,1000,2000]},
-        "RandomForestClassifier":      {"n_estimators": randint(50,400), "max_depth": [None,5,10,15,20], "min_samples_split": randint(2,15), "min_samples_leaf": randint(1,8), "max_features": ["sqrt","log2",0.5]},
-        "RandomForestRegressor":       {"n_estimators": randint(50,400), "max_depth": [None,5,10,15,20], "min_samples_split": randint(2,15), "min_samples_leaf": randint(1,8)},
-        "GradientBoostingClassifier":  {"n_estimators": randint(50,300), "learning_rate": uniform(0.01,0.3), "max_depth": randint(2,8), "subsample": uniform(0.6,0.4)},
-        "GradientBoostingRegressor":   {"n_estimators": randint(50,300), "learning_rate": uniform(0.01,0.3), "max_depth": randint(2,8)},
-        "XGBClassifier":               {"n_estimators": randint(50,400), "learning_rate": uniform(0.01,0.3), "max_depth": randint(3,10), "subsample": uniform(0.5,0.5), "colsample_bytree": uniform(0.5,0.5)},
-        "XGBRegressor":                {"n_estimators": randint(50,400), "learning_rate": uniform(0.01,0.3), "max_depth": randint(3,10)},
-        "LGBMClassifier":              {"n_estimators": randint(50,400), "learning_rate": uniform(0.01,0.3), "num_leaves": randint(15,128), "subsample": uniform(0.5,0.5)},
-        "LGBMRegressor":               {"n_estimators": randint(50,400), "learning_rate": uniform(0.01,0.3), "num_leaves": randint(15,128)},
-        "CatBoostClassifier":          {"iterations": randint(50,400), "learning_rate": uniform(0.01,0.3), "depth": randint(3,10)},
-        "Ridge":                       {"alpha": uniform(0.001,100), "solver": ["auto","svd","cholesky","lsqr"]},
-        "Lasso":                       {"alpha": uniform(0.001,10), "max_iter": [1000,2000,5000]},
-        "SVC":                         {"C": uniform(0.01,100), "kernel": ["rbf","poly","sigmoid"], "gamma": ["scale","auto"]},
+        "LogisticRegression":          {"C": {"dist": "uniform", "loc": 0.01, "scale": 10}, "solver": ["lbfgs","saga"], "max_iter": [500,1000,2000]},
+        "RandomForestClassifier":      {"n_estimators": {"dist":"randint","low":50,"high":400}, "max_depth": [None,5,10,15,20], "min_samples_split": {"dist":"randint","low":2,"high":15}, "min_samples_leaf": {"dist":"randint","low":1,"high":8}, "max_features": ["sqrt","log2",0.5]},
+        "RandomForestRegressor":       {"n_estimators": {"dist":"randint","low":50,"high":400}, "max_depth": [None,5,10,15,20], "min_samples_split": {"dist":"randint","low":2,"high":15}, "min_samples_leaf": {"dist":"randint","low":1,"high":8}},
+        "GradientBoostingClassifier":  {"n_estimators": {"dist":"randint","low":50,"high":300}, "learning_rate": {"dist":"uniform","loc":0.01,"scale":0.3}, "max_depth": {"dist":"randint","low":2,"high":8}, "subsample": {"dist":"uniform","loc":0.6,"scale":0.4}},
+        "GradientBoostingRegressor":   {"n_estimators": {"dist":"randint","low":50,"high":300}, "learning_rate": {"dist":"uniform","loc":0.01,"scale":0.3}, "max_depth": {"dist":"randint","low":2,"high":8}},
+        "XGBClassifier":               {"n_estimators": {"dist":"randint","low":50,"high":400}, "learning_rate": {"dist":"uniform","loc":0.01,"scale":0.3}, "max_depth": {"dist":"randint","low":3,"high":10}, "subsample": {"dist":"uniform","loc":0.5,"scale":0.5}, "colsample_bytree": {"dist":"uniform","loc":0.5,"scale":0.5}},
+        "XGBRegressor":                {"n_estimators": {"dist":"randint","low":50,"high":400}, "learning_rate": {"dist":"uniform","loc":0.01,"scale":0.3}, "max_depth": {"dist":"randint","low":3,"high":10}},
+        "LGBMClassifier":              {"n_estimators": {"dist":"randint","low":50,"high":400}, "learning_rate": {"dist":"uniform","loc":0.01,"scale":0.3}, "num_leaves": {"dist":"randint","low":15,"high":128}, "subsample": {"dist":"uniform","loc":0.5,"scale":0.5}},
+        "LGBMRegressor":               {"n_estimators": {"dist":"randint","low":50,"high":400}, "learning_rate": {"dist":"uniform","loc":0.01,"scale":0.3}, "num_leaves": {"dist":"randint","low":15,"high":128}},
+        "CatBoostClassifier":          {"iterations": {"dist":"randint","low":50,"high":400}, "learning_rate": {"dist":"uniform","loc":0.01,"scale":0.3}, "depth": {"dist":"randint","low":3,"high":10}},
+        "Ridge":                       {"alpha": {"dist":"uniform","loc":0.001,"scale":100}, "solver": ["auto","svd","cholesky","lsqr"]},
+        "Lasso":                       {"alpha": {"dist":"uniform","loc":0.001,"scale":10}, "max_iter": [1000,2000,5000]},
+        "SVC":                         {"C": {"dist":"uniform","loc":0.01,"scale":100}, "kernel": ["rbf","poly","sigmoid"], "gamma": ["scale","auto"]},
     }
     return spaces.get(model_class_name, {})
 

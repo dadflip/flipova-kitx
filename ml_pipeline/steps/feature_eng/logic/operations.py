@@ -70,18 +70,21 @@ def apply_condition(df, base_col, base_op, base_val, combine, extra_rows, then_c
     return df, new_name
 
 def run_formula(df, code):
-    df = df.copy()
-    ns = {col: df[col].copy() for col in df.columns}
-    ns.update({"np": np, "pd": pd, "math": math, "df": df})
+    df_in = df.copy()
+    ns = {col: df_in[col].copy() for col in df_in.columns}
+    ns.update({"np": np, "pd": pd, "math": math, "df": df_in})
     exec(compile(code, "<formula>", "exec"), ns)
     
+    if "df" in ns and ns["df"] is not df_in and isinstance(ns["df"], pd.DataFrame):
+        return ns["df"], {"__replaced__": True}
+        
     new_or_mod = {k: v for k, v in ns.items()
                   if not k.startswith("_") and k not in ("np","pd","math","df")
-                  and isinstance(v, pd.Series) and (k not in df.columns or not df[k].equals(v))}
+                  and isinstance(v, pd.Series) and (k not in df_in.columns or not df_in[k].equals(v))}
     
     for k, v in new_or_mod.items():
-        df[k] = v.values if isinstance(v, pd.Series) else v
-    return df, new_or_mod
+        df_in[k] = v.values if isinstance(v, pd.Series) and len(v) == len(df_in) else v
+    return df_in, new_or_mod
 
 def apply_text(df, col, op, arg1, arg2, new_name):
     df = df.copy()
