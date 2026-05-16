@@ -69,17 +69,20 @@ def apply_condition(df, base_col, base_op, base_val, combine, extra_rows, then_c
         df[new_name] = np.where(mask, then_val, else_val)
     return df, new_name
 
-def run_formula(df, code):
+def run_formula(df, code, raw_dataset=None, all_datasets=None):
     df_in = df.copy()
     ns = {col: df_in[col].copy() for col in df_in.columns}
-    ns.update({"np": np, "pd": pd, "math": math, "df": df_in})
+    ns.update({
+        "np": np, "pd": pd, "math": math, "df": df_in, 
+        "raw_dataset": raw_dataset, "all_datasets": all_datasets
+    })
     exec(compile(code, "<formula>", "exec"), ns)
     
     if "df" in ns and ns["df"] is not df_in and isinstance(ns["df"], pd.DataFrame):
         return ns["df"], {"__replaced__": True}
         
     new_or_mod = {k: v for k, v in ns.items()
-                  if not k.startswith("_") and k not in ("np","pd","math","df")
+                  if not k.startswith("_") and k not in ("np","pd","math","df","raw_dataset","all_datasets")
                   and isinstance(v, pd.Series) and (k not in df_in.columns or not df_in[k].equals(v))}
     
     for k, v in new_or_mod.items():

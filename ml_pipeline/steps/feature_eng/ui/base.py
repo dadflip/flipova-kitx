@@ -451,7 +451,7 @@ class TabularFeatureEngUI:
         self._snippets = SNIPPETS
         self.formula_snippet = widgets.Dropdown(options=["-- pick a snippet --"]+list(SNIPPETS.keys()), description="Snippets:", layout=widgets.Layout(width="400px"))
         self.formula_insert_btn = widgets.Button(description="Insert", button_style="info", layout=widgets.Layout(width="80px", height="28px"))
-        self.formula_editor = widgets.Textarea(placeholder="# Write Python expressions.\n# Column names are pd.Series variables.\n# np, pd, math available.\nnew_col = col_a / col_b.replace(0, np.nan)", layout=widgets.Layout(width="100%", height="180px"))
+        self.formula_editor = widgets.Textarea(placeholder="# Write Python code.\n# - 'df' : current DataFrame\n# - 'raw_dataset' : original object (Graph, Ontology, etc.) if applicable\n# - 'all_datasets' : dict of all loaded datasets\n# - Columns available as pd.Series variables.\n\n# Example: df = all_datasets['OtherDS'].copy()", layout=widgets.Layout(width="100%", height="220px"))
         self.formula_preview_btn = widgets.Button(description="Preview (10 rows)", layout=widgets.Layout(width="160px", height="32px"))
         self.formula_apply_btn   = widgets.Button(description="Apply to Dataset", button_style=styles.BTN_PRIMARY, layout=widgets.Layout(width="160px", height="32px"))
         self.formula_out = widgets.Output()
@@ -485,7 +485,11 @@ class TabularFeatureEngUI:
             self._notify(self.formula_out, "Formula editor is empty.", True); return
             
         try:
-            res_df, new_or_mod = run_formula(df, code)
+            # Get the actual raw object if it exists (e.g. if the tabular df was derived from a Graph)
+            raw_obj = self.state.data_raw.get(self.current_ds)
+            all_ds  = self.state.data_raw
+            
+            res_df, new_or_mod = run_formula(df, code, raw_dataset=raw_obj, all_datasets=all_ds)
             
             if not new_or_mod:
                 self._notify(self.formula_out, "No new/modified columns detected.", True); return
@@ -742,7 +746,42 @@ class FeatureEngUI:
             
         self._build_ui()
 
+    def _build_guide(self) -> widgets.Accordion:
+        guide_html = """
+        <div style='font-size:14px; line-height:1.6; color:#374151;'>
+            <h4>Guide de l'Éditeur Python (Custom Code)</h4>
+            <p>Cet éditeur permet de manipuler vos données avec la puissance de Python (Pandas, Numpy, Math).</p>
+            <ul>
+                <li><b>Variables disponibles :</b>
+                    <ul>
+                        <li><code>df</code> : Le DataFrame actuel (modifiable). Si vous réassignez <code>df</code>, tout le dataset est remplacé.</li>
+                        <li><code>raw_dataset</code> : L'objet d'origine (ex: Graphe NetworkX, Ontologie RDFLib) si disponible.</li>
+                        <li><code>all_datasets</code> : Un dictionnaire contenant TOUS les datasets chargés dans l'application.</li>
+                        <li><b>Colonnes :</b> Chaque colonne est disponible directement comme une variable <code>pd.Series</code> (ex: <code>new_col = Age / 10</code>).</li>
+                    </ul>
+                </li>
+                <li><b>Exemples :</b>
+                    <pre style='background:#f1f5f9; padding:5px;'># Exemple 1: Nouvelle colonne basée sur calcul
+new_col = (col_a + col_b) * 1.5
+
+# Exemple 2: Rechargement depuis un autre dataset
+df = all_datasets['Iris'].copy()
+
+# Exemple 3: Utilisation de propriétés d'un graphe
+if raw_dataset is not None:
+    df['node_degree'] = [raw_dataset.degree(n) for n in df['node_id']]</pre>
+                </li>
+            </ul>
+        </div>
+        """
+        out = widgets.Output()
+        with out: display(HTML(guide_html))
+        acc = widgets.Accordion(children=[out], selected_index=None)
+        acc.set_title(0, "💡 Guide: Comment utiliser l'éditeur Python & Objets d'origine")
+        return acc
+
     def _build_ui(self):
+        # Existing code...
         if not self.all_datasets:
             self.ui = styles.error_msg("Aucun dataset disponible pour Feature Engineering.")
             return
@@ -754,6 +793,7 @@ class FeatureEngUI:
         self.current_ds = self.ds_selector.value
         
         header = widgets.HTML(styles.card_html("Feature Engineering", "Advanced Variable Laboratory", ""))
+        guide_acc = self._build_guide()
         top_bar = widgets.HBox(
             [header, widgets.HTML("<div style='flex:1'></div>"), self.ds_selector],
             layout=widgets.Layout(align_items="center", justify_content="space-between",
@@ -762,7 +802,7 @@ class FeatureEngUI:
         
         self.dynamic_ui = widgets.VBox([])
         self.ui = widgets.VBox(
-            [top_bar, self.dynamic_ui],
+            [top_bar, guide_acc, self.dynamic_ui],
             layout=widgets.Layout(width="100%", max_width="1000px", border="1px solid #e5e7eb",
                                    padding="18px", border_radius="10px", background_color="#ffffff"))
         self.on_ds_change(None)

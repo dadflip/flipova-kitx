@@ -16,11 +16,12 @@ class DataSourceBlock:
         self.name_in = widgets.Text(description="Nom:", value=name, layout=widgets.Layout(width="180px"), style={"description_width": "initial"})
         type_options = [(k, v) for k, v in type_options if v != "sklearn"]
         self.type_dd = widgets.Dropdown(options=type_options, description="Format:", layout=widgets.Layout(width="220px"), style={"description_width": "initial"})
-        self.src_mode = widgets.Dropdown(options=["URL/Chemin", "Upload", "Presse-papier", "Dossier Local", "Dataset Sklearn"], value="URL/Chemin", layout=widgets.Layout(width="120px"))
+        self.src_mode = widgets.Dropdown(options=["URL/Chemin", "Upload", "Presse-papier", "Dossier Local", "Dataset Sklearn", "Code Python"], value="URL/Chemin", layout=widgets.Layout(width="120px"))
         self.path_in = widgets.Text(placeholder="http:// ou /chemin...", layout=widgets.Layout(flex="1", min_width="200px"))
         self.upload = widgets.FileUpload(accept="", multiple=False, layout=widgets.Layout(width="250px", display="none"))
         self.paste_in = widgets.Textarea(placeholder="Collez ici...", layout=widgets.Layout(flex="1", height="40px", min_width="200px", display="none"))
         self.sklearn_dd = widgets.Dropdown(options=["iris", "wine", "breast_cancer", "diabetes", "digits", "california_housing", "covtype"], layout=widgets.Layout(flex="1", min_width="200px", display="none"))
+        self.python_code = widgets.Textarea(placeholder="# Écrivez votre code Python ici.\n# Le résultat final doit être assigné à la variable 'data' ou 'df'.\nimport pandas as pd\nfrom sklearn.datasets import load_iris\niris = load_iris()\ndf = pd.DataFrame(iris.data, columns=iris.feature_names)\ndata = df", layout=widgets.Layout(flex="1", height="120px", min_width="300px", display="none"))
         
         self.chk_recursive = widgets.Checkbox(value=False, description="Récursif", layout=widgets.Layout(width="100px", display="none"))
         self.btn_scan = widgets.Button(description="Scanner", button_style="info", layout=widgets.Layout(width="80px", display="none"))
@@ -57,6 +58,7 @@ class DataSourceBlock:
                 self.upload,
                 self.paste_in,
                 self.sklearn_dd,
+                self.python_code,
                 self.chk_recursive,
                 self.btn_scan,
                 self.btn_preview
@@ -135,12 +137,23 @@ class DataSourceBlock:
             self.chk_recursive.layout.display = "none"
             self.btn_scan.layout.display = "none"
             self.file_list_box.layout.display = "none"
+        elif val == "Code Python":
+            self.type_dd.layout.display = "flex"
+            self.upload.layout.display = "none"
+            self.paste_in.layout.display = "none"
+            self.path_in.layout.display = "none"
+            self.sklearn_dd.layout.display = "none"
+            self.python_code.layout.display = "flex"
+            self.chk_recursive.layout.display = "none"
+            self.btn_scan.layout.display = "none"
+            self.file_list_box.layout.display = "none"
         else:
             self.type_dd.layout.display = "flex"
             self.upload.layout.display = "none"
             self.paste_in.layout.display = "none"
             self.path_in.layout.display = "flex"
             self.sklearn_dd.layout.display = "none"
+            self.python_code.layout.display = "none"
             self.path_in.placeholder = "http:// ou /chemin..."
             self.chk_recursive.layout.display = "none"
             self.btn_scan.layout.display = "none"
@@ -287,6 +300,21 @@ class DataSourceBlock:
         elif mode == "Presse-papier" and self.paste_in.value:
             src_type = "upload"
             src_content = self.paste_in.value.encode('utf-8')
+        elif mode == "Code Python" and self.python_code.value:
+            code = self.python_code.value
+            try:
+                import numpy as np
+                import pandas as pd
+                import math
+                ns = {"np": np, "pd": pd, "math": math}
+                exec(code, ns)
+                data = ns.get("data", ns.get("df"))
+                if data is None:
+                    return None, "Le code doit définir la variable 'data' ou 'df'."
+                return data, None
+            except Exception as e:
+                import traceback
+                return None, f"Erreur Python: {e}\n{traceback.format_exc()}"
         elif mode == "URL/Chemin" and self.path_in.value:
             val = self.path_in.value
             src_content = val
@@ -378,12 +406,18 @@ class DataLoaderUI:
     def _build_guide(self) -> widgets.Accordion:
         guide_html = """
         <div style='font-size:14px; line-height:1.6; color:#374151;'>
-            <h4>Guide du Chargement de Données</h4>
-            <p>Sélectionnez le mode de chargement selon le nombre de sources nécessaires. Vous pouvez ajouter/retirer des sources avec + et -.</p>
+            <h4>Guide du Chargement & Custom Loading</h4>
+            <p>Sélectionnez le mode de chargement ou utilisez <b>Code Python</b> pour un contrôle total.</p>
             <ul>
-                <li><b>Fichiers Tabulaires :</b> Définissez le séparateur, l'index, encodage...</li>
-                <li><b>Preview :</b> Prévisualisez chaque dataset un par un sans l'enregistrer dans l'état global.</li>
-                <li><b>Load All :</b> Charge toutes les sources et les injecte dans le pipeline ML.</li>
+                <li><b>Code Python :</b> Permet d'écrire un script de chargement. Le dataset final doit être dans la variable <code>data</code> ou <code>df</code>.</li>
+                <li><b>Exemple Iris :</b>
+                    <pre style='background:#f1f5f9; padding:5px;'>from sklearn.datasets import load_iris
+iris = load_iris()
+df = pd.DataFrame(iris.data, columns=iris.feature_names)
+df['target'] = iris.target
+data = df</pre>
+                </li>
+                <li><b>Objets non-tabulaires :</b> Vous pouvez charger des graphes (NetworkX) ou ontologies (RDFLib) via Python.</li>
             </ul>
         </div>
         """
