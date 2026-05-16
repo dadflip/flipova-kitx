@@ -47,121 +47,8 @@ class PipelineStyles:
     # ── CSS global ────────────────────────────────────────────────────────────
     CSS_GLOBALS = """
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         
-        :root {
-            --flipova-primary: #6366f1;
-            --flipova-secondary: #a855f7;
-            --flipova-accent: #f472b6;
-            --flipova-bg: #f8fafc;
-            --flipova-text: #0f172a;
-            --flipova-text-muted: #64748b;
-        }
-
-        /* Modernize standard Markdown rendering */
-        .rendered_html h1 { 
-            font-family: 'Plus Jakarta Sans', sans-serif !important;
-            font-weight: 800 !important;
-            letter-spacing: -0.04em !important;
-            color: #0f172a !important;
-            border-bottom: none !important;
-            margin-top: 1.5em !important;
-        }
-        
-        .rendered_html blockquote {
-            border-left: 4px solid var(--flipova-primary) !important;
-            background: #f8fafc !important;
-            padding: 15px 25px !important;
-            border-radius: 0 12px 12px 0 !important;
-            color: #64748b !important;
-            font-style: italic !important;
-            margin: 20px 0 !important;
-        }
-
-        .rendered_html hr {
-            height: 1px !important;
-            background: linear-gradient(to right, #e2e8f0, transparent) !important;
-            border: none !important;
-            margin: 30px 0 !important;
-        }
-
-        .flipova-hero {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            border-radius: 24px;
-            padding: 48px;
-            margin-bottom: 32px;
-            position: relative;
-            overflow: hidden;
-            color: white;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            box-shadow: 0 20px 40px -12px rgba(15, 23, 42, 0.3);
-        }
-
-        .flipova-hero::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.15), transparent 50%);
-            animation: rotate 20s linear infinite;
-        }
-
-        @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        .flipova-logo {
-            font-size: 2.5em;
-            font-weight: 800;
-            letter-spacing: -0.04em;
-            margin-bottom: 8px;
-            background: linear-gradient(to right, #818cf8, #c084fc, #f472b6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .flipova-tagline {
-            font-size: 1.1em;
-            color: #94a3b8;
-            font-weight: 500;
-            max-width: 600px;
-            line-height: 1.6;
-            margin-bottom: 24px;
-        }
-
-        .flipova-stats {
-            display: flex;
-            gap: 32px;
-            margin-top: 32px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            padding-top: 24px;
-        }
-
-        .flipova-stat-item {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .stat-label {
-            font-size: 0.7em;
-            text-transform: uppercase;
-            color: #64748b;
-            font-weight: 700;
-            letter-spacing: 0.1em;
-        }
-
-        .stat-value {
-            font-size: 1.25em;
-            font-weight: 700;
-            color: #f8fafc;
-        }
-
         .pipeline-card { 
             border: 1px solid #f1f5f9; 
             border-radius: 16px; 
@@ -171,14 +58,7 @@ class PipelineStyles:
             box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05); 
             font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             color: #334155;
-            transition: transform 0.2s ease;
         }
-        
-        .pipeline-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 24px -4px rgba(15, 23, 42, 0.08);
-        }
-
         .pipeline-title { 
             font-size: 1.5em; 
             font-weight: 700; 
@@ -186,36 +66,71 @@ class PipelineStyles:
             margin-bottom: 16px; 
             display: flex; 
             align-items: center; 
-            justify-content: space-between;
             gap: 12px; 
             letter-spacing: -0.02em;
         }
-        
         .pipeline-badge { 
-            background: #f1f5f9; 
+            background: #f8fafc; 
             color: #475569; 
-            padding: 6px 14px;
-            border-radius: 12px; 
+            padding: 4px 12px;
+            border-radius: 9999px; 
             font-size: 0.65em; 
-            font-weight: 700; 
+            font-weight: 600; 
             text-transform: uppercase;
             letter-spacing: 0.06em;
             border: 1px solid #e2e8f0;
         }
-
-        /* Glassmorphism for specific UI elements */
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 16px;
+        .pipeline-kv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 20px; }
+        .pipeline-kv-cell { background: #ffffff; padding: 16px; border-radius: 12px; border: 1px solid #f1f5f9; transition: all 0.2s ease; box-shadow: 0 1px 3px rgba(15,23,42,0.02);}
+        .pipeline-kv-cell:hover { box-shadow: 0 4px 12px -2px rgba(15,23,42,0.05); border-color: #e2e8f0; transform: translateY(-1px); }
+        .kv-key { font-size: 0.7em; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.05em; margin-bottom: 6px; }
+        .kv-val { font-size: 1.15em; font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .pipeline-section-title { font-size: 0.8em; font-weight: 700; color: #64748b; text-transform: uppercase; margin: 24px 0 12px 0; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; letter-spacing: 0.06em; }
+        .pipeline-dtype-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+        .pipeline-dtype-pill { background: #f8fafc; border: 1px solid #e2e8f0; padding: 4px 12px; border-radius: 8px; font-size: 0.8em; font-weight: 500; color: #475569; }
+        
+        .success-box { padding: 16px; background: #f0fdf4; border: 1px solid #bbf7d0; margin-bottom: 16px; border-radius: 12px; color: #166534; font-weight: 500; font-size: 0.9em; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+        .warning-box { padding: 16px; background: #fffbeb; border: 1px solid #fde68a; margin-bottom: 16px; border-radius: 12px; color: #92400e; font-weight: 500; font-size: 0.9em; box-shadow: 0 1px 2px rgba(0,0,0,0.02);  }
+        .error-box   { padding: 16px; background: #fef2f2; border: 1px solid #fecaca; margin-bottom: 16px; border-radius: 12px; color: #991b1b; font-weight: 500; font-size: 0.9em; box-shadow: 0 1px 2px rgba(0,0,0,0.02);  }
+        .info-box    { padding: 16px; background: #f8fafc; border: 1px solid #e2e8f0; margin-bottom: 16px; border-radius: 12px; color: #334155; font-weight: 500; font-size: 0.9em; box-shadow: 0 1px 2px rgba(0,0,0,0.02);  }
+        
+        /* Modernize ipywidgets buttons */
+        button.jupyter-button, .jupyter-widgets.jupyter-button {
+            width: auto !important;
+            max-width: none !important;
+            min-width: 120px !important;
+            padding: 10px 20px !important;
+            border-radius: 10px !important;
+            font-weight: 600 !important;
+            font-size: 0.9em !important;
+            letter-spacing: 0.02em !important;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            border: 1px solid transparent !important;
+            font-family: inherit !important;
         }
-
-        button.jupyter-button {
-            border-radius: 12px !important;
-            padding: 12px 24px !important;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+        
+        button.jupyter-button.mod-primary {
+            background-color: #0f172a !important;
+            color: #ffffff !important;
+            box-shadow: 0 2px 4px rgba(15, 23, 42, 0.1) !important;
+        }
+        button.jupyter-button.mod-primary:hover {
+            background-color: #334155 !important;
+            box-shadow: 0 4px 8px rgba(15, 23, 42, 0.15) !important;
+            transform: translateY(-1px) !important;
+        }
+        
+        /* Override specifically some other buttons styles to match */
+        button.jupyter-button:not(.mod-primary) {
+            background-color: #ffffff !important;
+            color: #334155 !important;
+            border-color: #e2e8f0 !important;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02) !important;
+        }
+        button.jupyter-button:not(.mod-primary):hover {
+            background-color: #f8fafc !important;
+            border-color: #cbd5e1 !important;
+            transform: translateY(-1px) !important;
         }
     </style>
     """
@@ -225,46 +140,13 @@ class PipelineStyles:
         display(HTML(cls.CSS_GLOBALS))
 
     @classmethod
-    def flipova_header(cls, version: str = "v0.9.0", username: str = "Flipova Designer") -> widgets.HTML:
-        """En-tête majestueux pour le notebook Flipova KitX."""
-        html = f"""
-        <div class="flipova-hero">
-            <div class="flipova-logo">
-                Flipova KitX
-                <span style="font-size: 0.3em; background: rgba(99, 102, 241, 0.2); padding: 4px 10px; border-radius: 6px; color: #818cf8; vertical-align: middle; border: 1px solid rgba(99, 102, 241, 0.3);">ENTERPRISE AI</span>
-            </div>
-            <div class="flipova-tagline">
-                Plateforme modulaire de Machine Learning pour l'exploration, le feature engineering 
-                et le déploiement de modèles prédictifs haute performance.
-            </div>
-            
-            <div class="flipova-stats">
-                <div class="flipova-stat-item">
-                    <span class="stat-label">Version</span>
-                    <span class="stat-value">{version}</span>
-                </div>
-                <div class="flipova-stat-item">
-                    <span class="stat-label">Statut</span>
-                    <span class="stat-value"><span style="color: #10b981;">●</span> Prêt</span>
-                </div>
-                <div class="flipova-stat-item">
-                    <span class="stat-label">Opérateur</span>
-                    <span class="stat-value">{username}</span>
-                </div>
-            </div>
-        </div>
-        """
-        return widgets.HTML(html)
-
-    @classmethod
     def card_html(cls, title: str, subtitle: str, content: str) -> str:
         return (
             f"<div class='pipeline-card'>"
-            f"<div class='pipeline-title'><div>{title}</div> "
+            f"<div class='pipeline-title'>{title} "
             f"<span class='pipeline-badge'>{subtitle}</span></div>"
-            f"<div style='color: #475569; line-height: 1.5;'>{content}</div></div>"
+            f"{content}</div>"
         )
-
 
     @classmethod
     def success_msg(cls, msg: str) -> widgets.HTML:
