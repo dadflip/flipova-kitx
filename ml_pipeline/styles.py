@@ -58,6 +58,33 @@ class PipelineStyles:
             --flipova-text-muted: #64748b;
         }
 
+        /* Modernize standard Markdown rendering */
+        .rendered_html h1 { 
+            font-family: 'Plus Jakarta Sans', sans-serif !important;
+            font-weight: 800 !important;
+            letter-spacing: -0.04em !important;
+            color: #0f172a !important;
+            border-bottom: none !important;
+            margin-top: 1.5em !important;
+        }
+        
+        .rendered_html blockquote {
+            border-left: 4px solid var(--flipova-primary) !important;
+            background: #f8fafc !important;
+            padding: 15px 25px !important;
+            border-radius: 0 12px 12px 0 !important;
+            color: #64748b !important;
+            font-style: italic !important;
+            margin: 20px 0 !important;
+        }
+
+        .rendered_html hr {
+            height: 1px !important;
+            background: linear-gradient(to right, #e2e8f0, transparent) !important;
+            border: none !important;
+            margin: 30px 0 !important;
+        }
+
         .flipova-hero {
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
             border-radius: 24px;
