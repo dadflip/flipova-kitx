@@ -810,6 +810,14 @@ value = "csv"
 options_key = "zip_formats"
 help = "Type des fichiers contenus dans le ZIP"
 
+# Code Python
+[[loading.adv_configs.python]]
+id = "note"
+type = "text"
+description = "Note"
+value = "Variable 'data' requise"
+help = "Votre code Python doit définir l'objet 'data' ou 'df'."
+
 # Texte
 [[loading.adv_configs.text]]
 id = "enc"

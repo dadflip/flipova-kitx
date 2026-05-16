@@ -16,12 +16,12 @@ class DataSourceBlock:
         self.name_in = widgets.Text(description="Nom:", value=name, layout=widgets.Layout(width="180px"), style={"description_width": "initial"})
         type_options = [(k, v) for k, v in type_options if v != "sklearn"]
         self.type_dd = widgets.Dropdown(options=type_options, description="Format:", layout=widgets.Layout(width="220px"), style={"description_width": "initial"})
-        self.src_mode = widgets.Dropdown(options=["URL/Chemin", "Upload", "Presse-papier", "Dossier Local", "Dataset Sklearn", "Code Python"], value="URL/Chemin", layout=widgets.Layout(width="120px"))
-        self.path_in = widgets.Text(placeholder="http:// ou /chemin...", layout=widgets.Layout(flex="1", min_width="200px"))
+        self.src_mode = widgets.Dropdown(options=["URL/Chemin", "Upload", "Presse-papier", "Dossier Local", "Dataset Sklearn", "Code Python"], value="URL/Chemin", layout=widgets.Layout(width="180px"))
+        self.path_in = widgets.Text(placeholder="http:// ou /chemin...", layout=widgets.Layout(flex="1", min_width="250px"))
         self.upload = widgets.FileUpload(accept="", multiple=False, layout=widgets.Layout(width="250px", display="none"))
         self.paste_in = widgets.Textarea(placeholder="Collez ici...", layout=widgets.Layout(flex="1", height="40px", min_width="200px", display="none"))
         self.sklearn_dd = widgets.Dropdown(options=["iris", "wine", "breast_cancer", "diabetes", "digits", "california_housing", "covtype"], layout=widgets.Layout(flex="1", min_width="200px", display="none"))
-        self.python_code = widgets.Textarea(placeholder="# Écrivez votre code Python ici.\n# Le résultat final doit être assigné à la variable 'data' ou 'df'.\nimport pandas as pd\nfrom sklearn.datasets import load_iris\niris = load_iris()\ndf = pd.DataFrame(iris.data, columns=iris.feature_names)\ndata = df", layout=widgets.Layout(flex="1", height="120px", min_width="300px", display="none"))
+        self.python_code = widgets.Textarea(placeholder="# Write your Python loading script here.\n# Define 'data' or 'df' with the result.\nimport pandas as pd\nimport numpy as np\n\n# Example: load custom structured data\n# df = pd.DataFrame({'a': [1,2], 'b': [3,4]})\n# data = df", layout=widgets.Layout(width="100%", height="200px", display="none"))
         
         self.chk_recursive = widgets.Checkbox(value=False, description="Récursif", layout=widgets.Layout(width="100px", display="none"))
         self.btn_scan = widgets.Button(description="Scanner", button_style="info", layout=widgets.Layout(width="80px", display="none"))
@@ -52,21 +52,23 @@ class DataSourceBlock:
             widgets.HBox([
                 self.btn_remove,
                 self.name_in,
-                self.type_dd,
                 self.src_mode,
+                self.type_dd,
+                widgets.HTML("<div style='flex:1'></div>"),
+                self.btn_preview
+            ], layout=widgets.Layout(align_items="center", gap="10px", margin="0 0 10px 0")),
+            widgets.VBox([
                 self.path_in,
                 self.upload,
                 self.paste_in,
                 self.sklearn_dd,
                 self.python_code,
-                self.chk_recursive,
-                self.btn_scan,
-                self.btn_preview
-            ], layout=widgets.Layout(align_items="center", flex_wrap="wrap", grid_gap="5px")),
+                widgets.HBox([self.chk_recursive, self.btn_scan], layout=widgets.Layout(align_items="center", gap="5px"))
+            ], layout=widgets.Layout(width="100%", margin="5px 0")),
             self.file_list_box,
             self.dynamic_opts,
             self.out_preview
-        ], layout=widgets.Layout(border="1px solid #e5e7eb", padding="10px", margin="10px 0", border_radius="8px", background_color="#fcfcfc"))
+        ], layout=widgets.Layout(border="1px solid #e5e7eb", padding="15px", margin="12px 0", border_radius="10px", background_color="#ffffff", box_shadow="0 1px 3px rgba(0,0,0,0.1)"))
 
     def _on_upload_changed(self, change):
         if not self.upload.value: return
@@ -406,19 +408,26 @@ class DataLoaderUI:
     def _build_guide(self) -> widgets.Accordion:
         guide_html = """
         <div style='font-size:14px; line-height:1.6; color:#374151;'>
-            <h4>Guide du Chargement & Custom Loading</h4>
-            <p>Sélectionnez le mode de chargement ou utilisez <b>Code Python</b> pour un contrôle total.</p>
-            <ul>
-                <li><b>Code Python :</b> Permet d'écrire un script de chargement. Le dataset final doit être dans la variable <code>data</code> ou <code>df</code>.</li>
-                <li><b>Exemple Iris :</b>
-                    <pre style='background:#f1f5f9; padding:5px;'>from sklearn.datasets import load_iris
-iris = load_iris()
-df = pd.DataFrame(iris.data, columns=iris.feature_names)
-df['target'] = iris.target
-data = df</pre>
-                </li>
-                <li><b>Objets non-tabulaires :</b> Vous pouvez charger des graphes (NetworkX) ou ontologies (RDFLib) via Python.</li>
-            </ul>
+            <h4>🚀 Guide du Chargement & Custom Loading</h4>
+            <p>Utilisez les modes classiques ou exploitez le <b>Code Python</b> pour des sources complexes.</p>
+            <div style='display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top:10px;'>
+                <div style='background:#f8fafc; padding:10px; border-radius:6px; border:1px solid #e2e8f0;'>
+                    <b style='color:#6366f1;'>Modes Standards</b><br/>
+                    - <b>URL/Chemin :</b> CSV, Parquet, JSON, Excel, Images...<br/>
+                    - <b>Upload :</b> Chargez vos fichiers locaux vers <code>data/raw/</code>.<br/>
+                    - <b>Dossier :</b> Scannez un répertoire pour charger plusieurs fichiers.<br/>
+                </div>
+                <div style='background:#f5f3ff; padding:10px; border-radius:6px; border:1px solid #ddd6fe;'>
+                    <b style='color:#7c3aed;'>🔌 Code Python Custom</b><br/>
+                    Permet d'utiliser n'importe quelle lib (NetworkX, RDFLib, PyG) et de renvoyer l'objet via <code>data</code>.
+                    <pre style='background:#fff; padding:5px; border:1px solid #e2e8f0; margin-top:5px; font-size:11px;'>
+import networkx as nx
+G = nx.karate_club_graph()
+# On renvoie le graphe entier
+data = G</pre>
+                </div>
+            </div>
+            <p style='margin-top:10px;'><i>Note: Les objets non-tabulaires chargés via Python seront disponibles dans l'étape Feature Engineering sous la variable <code>raw_dataset</code>.</i></p>
         </div>
         """
         out = widgets.Output()
