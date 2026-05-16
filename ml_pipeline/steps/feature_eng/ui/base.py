@@ -52,6 +52,13 @@ def _inject_tab_css() -> None:
     .fe-control-group {
         background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 10px;
     }
+    
+    /* Enhanced Table Styles */
+    .rendered_html table { border-collapse: collapse; border: none; font-variant-numeric: tabular-nums; width: 100%; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .rendered_html th { background: #f1f5f9 !important; color: #475569 !important; font-weight: 600 !important; border: 1px solid #e2e8f0 !important; padding: 10px !important; }
+    .rendered_html td { border: 1px solid #f1f5f9 !important; padding: 8px 12px !important; font-size: 0.9em !important; }
+    .rendered_html tr:nth-child(even) { background: #f8fafc; }
+    .rendered_html tr:hover { background: #f1f5f9 !important; }
     </style>"""))
 
 class TabularFeatureEngUI:
@@ -275,7 +282,7 @@ class TabularFeatureEngUI:
             clear_output(wait=True)
             display(HTML(f"<div style='color:{color};font-weight:bold;font-size:0.85em;'>{tag} {msg}</div>"))
 
-    def _section_title(self, text: str, icon: str = "⚡", color: str = "#6366f1") -> widgets.HTML:
+    def _section_title(self, text: str, icon: str = "Step", color: str = "#6366f1") -> widgets.HTML:
         return widgets.HTML(f"<div class='fe-section-title' style='color:{color};'><span>{icon}</span> {text}</div>")
 
     # ── Preview tab ───────────────────────────────────────────────────────────
@@ -305,7 +312,7 @@ class TabularFeatureEngUI:
             
         self.tab_preview = widgets.VBox([
             styles.help_box("<b>Exploration Interactive</b> — Visualisez le dataset avec tri, filtres et indicateurs.", "#0ea5e9"),
-            self._section_title("Contrôles de la Vue", "👁", "#0ea5e9"),
+            self._section_title("Controles de la Vue", "View", "#0ea5e9"),
             widgets.VBox([
                 widgets.HBox([self.preview_rows, self.preview_sort_col, self.preview_sort_asc], layout=widgets.Layout(gap="10px", margin="0 0 10px 0")),
                 widgets.HBox([self.preview_search], layout=widgets.Layout(margin="0 0 10px 0")),
@@ -383,8 +390,8 @@ class TabularFeatureEngUI:
         self.math_btn.on_click(self._apply_math)
         
         self.tab_math = widgets.VBox([
-            styles.help_box("<b>Math & Logique</b> — Calculs arithmétiques simples entre colonnes numériques.", "#8b5cf6"),
-            self._section_title("Configuration du calcul", "➕", "#8b5cf6"),
+            styles.help_box("<b>Math et Logique</b> — Calculs arithmetiques simples entre colonnes numeriques.", "#8b5cf6"),
+            self._section_title("Configuration du calcul", "Math", "#8b5cf6"),
             widgets.VBox([
                 widgets.HBox([self.math_col1, self.math_op, self.math_col2, self.math_const], layout=widgets.Layout(gap="10px", margin="0 0 10px 0")),
                 widgets.HBox([self.math_new_col, self.math_btn], layout=widgets.Layout(gap="10px"))
@@ -447,14 +454,14 @@ class TabularFeatureEngUI:
         self.cond_btn.on_click(self._apply_condition)
         
         self.tab_condition = widgets.VBox([
-            styles.help_box("<b>Filtres & Conditions</b> — Créez des flags binaires ou des mappings conditionnels.", "#f97316"),
-            self._section_title("Définition du filtre", "❓", "#f97316"),
+            styles.help_box("<b>Filtres et Conditions</b> — Creez des flags binaires ou des mappings conditionnels.", "#f97316"),
+            self._section_title("Definition du filtre", "Filter", "#f97316"),
             widgets.VBox([
                 widgets.HBox([self.cond_col, self.cond_op, self.cond_val, self.cond_combine], layout=widgets.Layout(gap="10px", margin="0 0 10px 0")),
                 self.cond_extra_box,
                 widgets.HBox([add_btn, rem_btn], layout=widgets.Layout(gap="10px", margin="5px 0 15px 0")),
             ], layout=widgets.Layout(padding="15px", border="1px solid #e2e8f0", border_radius="8px", background_color="#fffaf5")),
-            self._section_title("Résultat (Output)", "➡", "#f97316"),
+            self._section_title("Resultat (Output)", "Out", "#f97316"),
             widgets.VBox([
                 widgets.HBox([self.cond_then_col, self.cond_then_val, self.cond_else_col, self.cond_else_val], layout=widgets.Layout(gap="10px", margin="0 0 10px 0")),
                 self.cond_map_text,
@@ -517,8 +524,8 @@ class TabularFeatureEngUI:
         self.formula_apply_btn.on_click(lambda _: self._apply_formula(preview=False))
         
         self.tab_formula = widgets.VBox([
-            styles.help_box("<b>Éditeur Python (Power User)</b> — Manipulation directe du DataFrame <code>df</code>.", "#0ea5e9"),
-            self._section_title("Code Python Custom", "🐍", "#0ea5e9"),
+            styles.help_box("<b>Editeur Python (Power User)</b> — Manipulation directe du DataFrame <code>df</code>.", "#0ea5e9"),
+            self._section_title("Code Python Custom", "Python", "#0ea5e9"),
             widgets.VBox([
                 widgets.HTML("<b style='font-size:0.82em;color:#6b7280;'>Colonnes disponibles :</b>"),
                 self._formula_col_html,
@@ -600,8 +607,8 @@ class TabularFeatureEngUI:
         self.text_btn.on_click(self._apply_text)
         
         self.tab_text = widgets.VBox([
-            styles.help_box("<b>Manipulation de Texte</b> — Nettoyage, extraction ou transformation de chaînes.", "#06b6d4"),
-            self._section_title("Configuration Textuelle", "✍", "#06b6d4"),
+            styles.help_box("<b>Manipulation de Texte</b> — Nettoyage, extraction ou transformation de chaines.", "#06b6d4"),
+            self._section_title("Configuration Textuelle", "Text", "#06b6d4"),
             widgets.VBox([
                 widgets.HBox([self.text_col, self.text_op, self.text_arg1, self.text_arg2], layout=widgets.Layout(gap="10px", margin="0 0 10px 0")),
                 widgets.HBox([self.text_new_col, self.text_btn], layout=widgets.Layout(gap="10px"))
@@ -632,8 +639,8 @@ class TabularFeatureEngUI:
         self.date_btn.on_click(self._apply_date)
         
         self.tab_date = widgets.VBox([
-            styles.help_box("<b>Dates & Temps</b> — Décomposez des dates en features exploitables pour le ML.", "#f59e0b"),
-            self._section_title("Configuration Temporelle", "📅", "#f59e0b"),
+            styles.help_box("<b>Dates et Temps</b> — Decomposez des dates en features exploitables pour le ML.", "#f59e0b"),
+            self._section_title("Configuration Temporelle", "Date", "#f59e0b"),
             widgets.VBox([
                 widgets.HBox([self.date_col, self.date_extract], layout=widgets.Layout(gap="15px", margin="0 0 10px 0")),
                 self.date_btn,
@@ -666,8 +673,8 @@ class TabularFeatureEngUI:
         self.bin_btn.on_click(self._apply_binning)
         
         self.tab_binning = widgets.VBox([
-            styles.help_box("<b>Binning (Discrétisation)</b> — Transformez des variables continues en catégories.", "#10b981"),
-            self._section_title("Configuration du Binning", "📊", "#10b981"),
+            styles.help_box("<b>Binning (Discretisation)</b> — Transformez des variables continues en categories.", "#10b981"),
+            self._section_title("Configuration du Binning", "Chart", "#10b981"),
             widgets.VBox([
                 widgets.HBox([self.bin_col, self.bin_method, self.bin_bins], layout=widgets.Layout(gap="10px", margin="0 0 10px 0")),
                 widgets.HBox([self.bin_labels, self.bin_new_col, self.bin_btn], layout=widgets.Layout(gap="10px"))
@@ -700,8 +707,8 @@ class TabularFeatureEngUI:
         self.viz_btn.on_click(self._apply_viz)
         
         self.tab_viz = widgets.VBox([
-            styles.help_box("<b>Visualisation Rapide</b> — Vérifiez l'impact de vos transformations en un clin d'œil.", "#6366f1"),
-            self._section_title("Configuration Graphique", "📈", "#6366f1"),
+            styles.help_box("<b>Visualisation Rapide</b> — Verifiez l'impact de vos transformations en un clin d'oeil.", "#6366f1"),
+            self._section_title("Configuration Graphique", "Viz", "#6366f1"),
             widgets.VBox([
                 widgets.HBox([self.viz_x, self.viz_y, self.viz_hue, self.viz_kind, self.viz_btn], 
                               layout=widgets.Layout(gap="10px", align_items="center")),
@@ -734,8 +741,8 @@ class TabularFeatureEngUI:
         self.dash_btn.on_click(self._apply_dashboard)
         
         self.tab_dashboard = widgets.VBox([
-            styles.help_box("<b>Analyse de Corrélation</b> — Comparez vos features à la target pour évaluer leur pertinence.", "#be185d"),
-            self._section_title("Dashboard de Performance", "🎯", "#be185d"),
+            styles.help_box("<b>Analyse de Correlation</b> — Comparez vos features a la target pour evaluer leur pertinence.", "#be185d"),
+            self._section_title("Dashboard de Performance", "Target", "#be185d"),
             widgets.VBox([
                 widgets.HBox([self.dash_target, self.dash_features, self.dash_btn], 
                               layout=widgets.Layout(gap="20px", align_items="flex-start")),
@@ -776,8 +783,8 @@ class TabularFeatureEngUI:
         self.manage_btn.on_click(self._apply_manage)
         
         self.tab_manage = widgets.VBox([
-            styles.help_box("<b>Inventaire des Colonnes</b> — Gérez les types, dupliquez ou supprimez des colonnes.", "#eab308"),
-            self._section_title("Maintenance du Dataset", "⚙", "#eab308"),
+            styles.help_box("<b>Inventaire des Colonnes</b> — Gerez les types, dupliquez ou supprimez des colonnes.", "#eab308"),
+            self._section_title("Maintenance du Dataset", "Setup", "#eab308"),
             widgets.VBox([
                 widgets.HBox([self.manage_col, self.manage_action], layout=widgets.Layout(gap="10px", margin="0 0 10px 0")),
                 widgets.HBox([self.manage_type, self.manage_new_name], layout=widgets.Layout(gap="10px", margin="0 0 10px 0")),

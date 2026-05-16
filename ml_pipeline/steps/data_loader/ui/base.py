@@ -13,30 +13,39 @@ class DataSourceBlock:
         self.is_removable = is_removable
         self.on_remove = on_remove
         
-        self.name_in = widgets.Text(description="Nom:", value=name, layout=widgets.Layout(width="180px"), style={"description_width": "initial"})
+        self.name_in = widgets.Text(description="Nom:", value=name, layout=widgets.Layout(width="220px"), style={"description_width": "initial"})
         type_options = [(k, v) for k, v in type_options if v != "sklearn"]
-        self.type_dd = widgets.Dropdown(options=type_options, description="Format:", layout=widgets.Layout(width="220px"), style={"description_width": "initial"})
-        self.src_mode = widgets.Dropdown(options=["URL/Chemin", "Upload", "Presse-papier", "Dossier Local", "Dataset Sklearn", "Code Python"], value="URL/Chemin", layout=widgets.Layout(width="180px"))
-        self.path_in = widgets.Text(placeholder="http:// ou /chemin...", layout=widgets.Layout(flex="1", min_width="250px"))
-        self.upload = widgets.FileUpload(accept="", multiple=False, layout=widgets.Layout(width="250px", display="none"))
-        self.paste_in = widgets.Textarea(placeholder="Collez ici...", layout=widgets.Layout(flex="1", height="40px", min_width="200px", display="none"))
-        self.sklearn_dd = widgets.Dropdown(options=["iris", "wine", "breast_cancer", "diabetes", "digits", "california_housing", "covtype"], layout=widgets.Layout(flex="1", min_width="200px", display="none"))
-        self.python_code = widgets.Textarea(placeholder="# Write your Python loading script here.\n# Define 'data' or 'df' with the result.\nimport pandas as pd\nimport numpy as np\n\n# Example: load custom structured data\n# df = pd.DataFrame({'a': [1,2], 'b': [3,4]})\n# data = df", layout=widgets.Layout(width="100%", height="200px", display="none"))
+        self.type_dd = widgets.Dropdown(options=type_options, description="Format:", layout=widgets.Layout(width="250px"), style={"description_width": "initial"})
         
-        self.chk_recursive = widgets.Checkbox(value=False, description="Récursif", layout=widgets.Layout(width="100px", display="none"))
-        self.btn_scan = widgets.Button(description="Scanner", button_style="info", layout=widgets.Layout(width="80px", display="none"))
-        self.file_list_box = widgets.VBox([], layout=widgets.Layout(max_height="200px", overflow="auto", display="none", border="1px solid #ccc", margin="5px 0"))
+        src_modes = [
+            ("URL / Chemin", "URL/Chemin"),
+            ("Upload Fichier", "Upload"),
+            ("Presse-papier", "Presse-papier"),
+            ("Dossier Local", "Dossier Local"),
+            ("Dataset Sklearn", "Dataset Sklearn"),
+            ("Code Python", "Code Python")
+        ]
+        self.src_mode = widgets.Dropdown(options=src_modes, value="URL/Chemin", description="Origine:", layout=widgets.Layout(width="220px"), style={"description_width": "initial"})
+        self.path_in = widgets.Text(placeholder="http://... ou data/file.csv", layout=widgets.Layout(flex="1", min_width="300px"))
+        self.upload = widgets.FileUpload(accept="", multiple=False, layout=widgets.Layout(width="300px", display="none"))
+        self.paste_in = widgets.Textarea(placeholder="Collez ici votre CSV ou JSON...", layout=widgets.Layout(flex="1", height="60px", min_width="300px", display="none"))
+        self.sklearn_dd = widgets.Dropdown(options=["iris", "wine", "breast_cancer", "diabetes", "digits", "california_housing", "covtype"], layout=widgets.Layout(flex="1", min_width="250px", display="none"))
+        self.python_code = widgets.Textarea(placeholder="# Votre script Python ici.\n# Resultat attendu dans 'data' ou 'df'.", layout=widgets.Layout(width="100%", height="220px", display="none"))
+        
+        self.chk_recursive = widgets.Checkbox(value=False, description="Recursif", layout=widgets.Layout(width="100px", display="none"))
+        self.btn_scan = widgets.Button(description="Scanner", button_style="info", layout=widgets.Layout(width="100px", display="none"))
+        self.file_list_box = widgets.VBox([], layout=widgets.Layout(max_height="200px", overflow="auto", display="none", border="1px solid #e2e8f0", border_radius="6px", margin="10px 0", padding="10px"))
         self.file_checkboxes = {}
         
-        self.btn_preview = widgets.Button(description="Preview", button_style="info", layout=widgets.Layout(width="100px"))
+        self.btn_preview = widgets.Button(description="Preview", icon="search", button_style="info", layout=widgets.Layout(width="140px", height="36px"))
         self.btn_scan.on_click(self._on_scan)
         self.btn_preview.on_click(self._on_preview)
         
         if self.is_removable:
-            self.btn_remove = widgets.Button(icon="minus", button_style="danger", layout=widgets.Layout(width="40px"))
+            self.btn_remove = widgets.Button(icon="trash", button_style="danger", layout=widgets.Layout(width="40px"), tooltip="Supprimer cette source")
             self.btn_remove.on_click(lambda b: self.on_remove(self) if self.on_remove else None)
         else:
-            self.btn_remove = widgets.HTML(layout=widgets.Layout(width="40px")) # Spacer
+            self.btn_remove = widgets.HTML("<div style='width:40px'>&nbsp;</div>")
             
         self.dynamic_opts = widgets.VBox([])
         self.opt_widgets = {}
@@ -49,26 +58,37 @@ class DataSourceBlock:
         self._update_adv_opts()
         
         self.ui = widgets.VBox([
+            # Section: Identité & Contrôles rapides
             widgets.HBox([
                 self.btn_remove,
                 self.name_in,
-                self.src_mode,
-                self.type_dd,
                 widgets.HTML("<div style='flex:1'></div>"),
                 self.btn_preview
-            ], layout=widgets.Layout(align_items="center", gap="10px", margin="0 0 10px 0")),
-            widgets.VBox([
-                self.path_in,
-                self.upload,
-                self.paste_in,
-                self.sklearn_dd,
-                self.python_code,
-                widgets.HBox([self.chk_recursive, self.btn_scan], layout=widgets.Layout(align_items="center", gap="5px"))
-            ], layout=widgets.Layout(width="100%", margin="5px 0")),
+            ], layout=widgets.Layout(align_items="center", gap="12px", margin="0 0 15px 0")),
+            
+            # Formulaire principal
+            widgets.HBox([
+                widgets.VBox([
+                    widgets.HTML("<b style='font-size:0.85em; color:#64748b; text-transform:uppercase;'>📌 Source</b>"),
+                    self.src_mode,
+                    self.path_in,
+                    self.upload,
+                    self.paste_in,
+                    self.sklearn_dd,
+                    self.python_code,
+                    widgets.HBox([self.chk_recursive, self.btn_scan], layout=widgets.Layout(align_items="center", gap="10px"))
+                ], layout=widgets.Layout(flex="2", margin="0 15px 0 0")),
+                
+                widgets.VBox([
+                    widgets.HTML("<b style='font-size:0.85em; color:#64748b; text-transform:uppercase;'>📊 Format</b>"),
+                    self.type_dd,
+                ], layout=widgets.Layout(flex="1"))
+            ], layout=widgets.Layout(align_items="flex-start")),
+            
             self.file_list_box,
             self.dynamic_opts,
             self.out_preview
-        ], layout=widgets.Layout(border="1px solid #e5e7eb", padding="15px", margin="12px 0", border_radius="10px", background_color="#ffffff", box_shadow="0 1px 3px rgba(0,0,0,0.1)"))
+        ], layout=widgets.Layout(border="1px solid #e2e8f0", padding="20px", margin="15px 0", border_radius="12px", background_color="#ffffff", box_shadow="0 4px 6px -1px rgba(0, 0, 0, 0.05)"))
 
     def _on_upload_changed(self, change):
         if not self.upload.value: return
@@ -405,29 +425,27 @@ class DataLoaderUI:
         self._build_ui()
         self._on_mode_change()
 
-    def _build_guide(self) -> widgets.Accordion:
         guide_html = """
         <div style='font-size:14px; line-height:1.6; color:#374151;'>
-            <h4>🚀 Guide du Chargement & Custom Loading</h4>
-            <p>Utilisez les modes classiques ou exploitez le <b>Code Python</b> pour des sources complexes.</p>
+            <h4 style='color:#1e293b; margin-top:0;'>Guide du Chargement et Strategies</h4>
+            <p>Le pipeline supporte une large gamme de formats et de modes de distribution.</p>
             <div style='display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top:10px;'>
-                <div style='background:#f8fafc; padding:10px; border-radius:6px; border:1px solid #e2e8f0;'>
-                    <b style='color:#6366f1;'>Modes Standards</b><br/>
-                    - <b>URL/Chemin :</b> CSV, Parquet, JSON, Excel, Images...<br/>
-                    - <b>Upload :</b> Chargez vos fichiers locaux vers <code>data/raw/</code>.<br/>
-                    - <b>Dossier :</b> Scannez un répertoire pour charger plusieurs fichiers.<br/>
+                <div style='background:#eff6ff; padding:12px; border-radius:8px; border:1px solid #bfdbfe;'>
+                    <b style='color:#2563eb;'>Formats Supportes</b><br/>
+                    - Tabulaire: CSV, Excel, Parquet, Feather, HDF5, ORC, SQLite.<br/>
+                    - Multimodal: Images, Videos, Graphes (GraphML), Ontologies.<br/>
+                    - DB: Neo4j, Web Scraping / KG.
                 </div>
-                <div style='background:#f5f3ff; padding:10px; border-radius:6px; border:1px solid #ddd6fe;'>
-                    <b style='color:#7c3aed;'>🔌 Code Python Custom</b><br/>
-                    Permet d'utiliser n'importe quelle lib (NetworkX, RDFLib, PyG) et de renvoyer l'objet via <code>data</code>.
-                    <pre style='background:#fff; padding:5px; border:1px solid #e2e8f0; margin-top:5px; font-size:11px;'>
-import networkx as nx
-G = nx.karate_club_graph()
-# On renvoie le graphe entier
-data = G</pre>
+                <div style='background:#f5f3ff; padding:12px; border-radius:8px; border:1px solid #ddd6fe;'>
+                    <b style='color:#7c3aed;'>Code Python-fu</b><br/>
+                    Chargez n'importe quel objet Python complexe.<br/>
+                    <pre style='background:#fff; padding:6px; border:1px solid #e2e8f0; margin-top:5px; font-size:11px; border-radius:4px;'>
+import pandas as pd
+# Votre logique personnalisee ici
+data = pd.read_csv('...')</pre>
                 </div>
             </div>
-            <p style='margin-top:10px;'><i>Note: Les objets non-tabulaires chargés via Python seront disponibles dans l'étape Feature Engineering sous la variable <code>raw_dataset</code>.</i></p>
+            <p style='margin-top:10px; font-size:0.9em;'><i>Note: Utilisez le bouton Preview sur chaque source pour valider vos parametres avant de charger le tout.</i></p>
         </div>
         """
         out = widgets.Output()
@@ -437,34 +455,58 @@ data = G</pre>
         acc.set_title(0, "Guide explicatif des Outils de Chargement (Cliquez pour ouvrir)")
         return acc
 
+    def _section_title(self, text: str, icon: str = "⚡", color: str = "#6366f1") -> widgets.HTML:
+        return widgets.HTML(f"<div style='font-size: 0.9em; font-weight: 700; color: {color}; margin: 15px 0 8px 0; display: flex; align-items: center; gap: 8px;'><span>{icon}</span> {text}</div>")
+
     def _build_ui(self):
+        display(HTML("""<style>
+        .loader-block {
+            border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; 
+            margin: 15px 0; background-color: #fff;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .loader-block:hover { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08); }
+        .loader-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #f1f5f9; }
+        .loader-source-type { font-weight: 600; font-size: 0.85em; color: #64748b; background: #f8fafc; padding: 4px 10px; border-radius: 6px; border: 1px solid #e2e8f0; }
+        
+        /* Table Styles */
+        .rendered_html table { border-collapse: collapse; border: none; font-variant-numeric: tabular-nums; width: 100%; border-radius: 8px; overflow: hidden; }
+        .rendered_html th { background: #f1f5f9 !important; color: #475569 !important; font-weight: 600 !important; border: 1px solid #e2e8f0 !important; }
+        .rendered_html td { border: 1px solid #f1f5f9 !important; padding: 6px 10px !important; }
+        .rendered_html tr:nth-child(even) { background: #f8fafc; }
+        .rendered_html tr:hover { background: #f1f5f9 !important; }
+        </style>"""))
+        
         modes = self.config.get("modes", [{"label": "Single", "value": "single"}])
         mode_options = [(m.get("label", m["value"]), m["value"]) for m in modes]
         
-        self.mode_dd = widgets.Dropdown(options=mode_options, description="Mode Loading:", layout=widgets.Layout(width="250px"))
+        self.mode_dd = widgets.Dropdown(options=mode_options, description="Mode Loading:", layout=widgets.Layout(width="320px"), style={"description_width": "initial"})
         self.mode_dd.observe(self._on_mode_change, names='value')
         
-        self.btn_add_source = widgets.Button(icon="plus", description=" Ajouter Source", button_style="success", layout=widgets.Layout(width="150px"))
+        self.btn_add_source = widgets.Button(icon="plus", description=" Ajouter Source", button_style="success", layout=widgets.Layout(width="180px", height="36px"))
         self.btn_add_source.on_click(self._on_add_source)
         
-        self.btn_load_all = widgets.Button(description="Load All into State", button_style=styles.BTN_PRIMARY, layout=widgets.Layout(width="250px", height="40px"))
+        self.btn_load_all = widgets.Button(description="Charger tout dans le State", button_style=styles.BTN_PRIMARY, layout=widgets.Layout(width="280px", height="44px"))
         self.btn_load_all.on_click(self._on_load_all)
         
-        self.btn_clear_cache = widgets.Button(description="Vider le cache disk & RAM", button_style="warning", layout=widgets.Layout(width="250px", height="40px"))
+        self.btn_clear_cache = widgets.Button(description="Vider Cache & RAM", button_style="warning", layout=widgets.Layout(width="280px", height="44px"))
         self.btn_clear_cache.on_click(self._on_clear_cache)
         
-        header = widgets.HTML(styles.card_html("DataLoader", "Chargement des données & Multimodal", "Configurez vos sources de données et prévisualisez-les indépendamment."))
+        header = widgets.HTML(styles.card_html("DataLoader", "Multimodal v2.0", "Configurez vos sources locales ou distantes, du tabulaire au KG."))
         guide_acc = self._build_guide()
         
         self.ui = widgets.VBox([
             header,
             guide_acc,
-            widgets.HBox([self.mode_dd, self.btn_add_source], layout=widgets.Layout(margin="10px 0", gap="15px")),
-            self.mode_opts_container,
-            widgets.HTML("<hr style='border:1px solid #e5e7eb; margin: 15px 0;'>"),
+            widgets.VBox([
+                self._section_title("Configuration du Pipeline de Chargement", "Step", "#1e293b"),
+                widgets.HBox([self.mode_dd, self.btn_add_source], layout=widgets.Layout(align_items="center", gap="15px", margin="5px 0 15px 0")),
+                self.mode_opts_container,
+            ], layout=widgets.Layout(padding="0 0 10px 0")),
+            widgets.HTML("<div style='height:2px; background:#f1f5f9; margin:15px 0;'></div>"),
             self.blocks_container,
-            widgets.HTML("<hr style='border:1px solid #e5e7eb; margin: 15px 0;'>"),
-            widgets.HBox([self.btn_load_all, self.btn_clear_cache], layout=widgets.Layout(justify_content="center", gap="20px")),
+            widgets.HBox([self.btn_load_all, self.btn_clear_cache], layout=widgets.Layout(justify_content="center", gap="30px", margin="30px 0")),
             self.out_global
         ], layout=styles.LAYOUT_SECTION)
 

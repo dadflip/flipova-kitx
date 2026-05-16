@@ -25,30 +25,63 @@ def load_data(ds_type, source_type, path_or_content, adv_options):
         raise Exception(f"Erreur de chargement ({ds_type}): {e}")
 
 def _load_data_internal(ds_type, source_type, path_or_content, adv_options):
-    if ds_type in ("csv", "timeseries"):
+    if ds_type in ("csv", "tsv", "timeseries", "clipboard"):
+        # common options for CSV-like
         sep = adv_options.get("sep", ",")
+        if ds_type == "tsv": sep = "\t"
         if sep == "": sep = ","
         header = adv_options.get("header", "infer")
         if header == "None": header = None
-        elif header.isdigit(): header = int(header)
+        elif str(header).isdigit(): header = int(header)
         
         kwargs = {"sep": sep, "header": header}
-        
         if "enc" in adv_options and adv_options["enc"]: kwargs["encoding"] = adv_options["enc"]
-        if "skiprows" in adv_options and adv_options["skiprows"].isdigit(): kwargs["skiprows"] = int(adv_options["skiprows"])
-        if "nrows" in adv_options and adv_options["nrows"].isdigit(): kwargs["nrows"] = int(adv_options["nrows"])
-        if "index_col" in adv_options and adv_options["index_col"]: kwargs["index_col"] = adv_options["index_col"]
-        if "parse_dates" in adv_options and adv_options["parse_dates"] is True: kwargs["parse_dates"] = True
+        if "skiprows" in adv_options and str(adv_options.get("skiprows", "")).isdigit(): 
+            kwargs["skiprows"] = int(adv_options["skiprows"])
+        if "nrows" in adv_options and str(adv_options.get("nrows", "")).isdigit(): 
+            kwargs["nrows"] = int(adv_options["nrows"])
+        if "index_col" in adv_options and adv_options["index_col"]: 
+            kwargs["index_col"] = adv_options["index_col"]
+        if adv_options.get("parse_dates") is True: kwargs["parse_dates"] = True
             
         if source_type == "upload":
             df = pd.read_csv(io.BytesIO(path_or_content), **kwargs)
         else:
             df = pd.read_csv(path_or_content, **kwargs)
             
-        # Sample Frac
         frac = adv_options.get("sample_frac", 1.0)
         if float(frac) < 1.0:
             df = df.sample(frac=float(frac), random_state=42)
+        return df
+
+    elif ds_type == "parquet":
+        if source_type == "upload": return pd.read_parquet(io.BytesIO(path_or_content))
+        return pd.read_parquet(path_or_content)
+
+    elif ds_type == "feather":
+        if source_type == "upload": return pd.read_feather(io.BytesIO(path_or_content))
+        return pd.read_feather(path_or_content)
+
+    elif ds_type == "hdf5":
+        if source_type == "upload": return pd.read_hdf(io.BytesIO(path_or_content))
+        return pd.read_hdf(path_or_content)
+
+    elif ds_type == "orc":
+        if source_type == "upload": return pd.read_orc(io.BytesIO(path_or_content))
+        return pd.read_orc(path_or_content)
+
+    elif ds_type == "sqlite":
+        import sqlite3
+        table = adv_options.get("table", "")
+        # path_or_content is the DB path
+        conn = sqlite3.connect(path_or_content)
+        if not table:
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+            row = cursor.fetchone()
+            table = row[0] if row else "unknown_table"
+        df = pd.read_sql_query(f"SELECT * FROM {table}", conn)
+        conn.close()
         return df
         
     elif ds_type == "json":
